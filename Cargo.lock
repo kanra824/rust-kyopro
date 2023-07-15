@@ -10,16 +10,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "once_cell"
-version = "1.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f7254b99e31cad77da24b08ebf628882739a608578bb1bcdfc1f9c21260d7c0"
-
-[[package]]
 name = "proconio"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21578baf952f9aabd1bd25f5fa6c4f1f48dd6d61491ba52411ef599781d91fe2"
-dependencies = [
- "once_cell",
-]
+checksum = "0eb404616795079e2390e7115acf0ada24e9332e8476de2aada7bacb9992dc9e"

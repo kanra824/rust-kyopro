@@ -3,17 +3,16 @@ name = "atcoder"
 version = "0.1.0"
 edition = "2021"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [[bin]]
 name = "main"
 path = "src/main.rs"
 
-# bin setting to build the library while implementing it.
+# to check lib
 [[bin]]
 name = "lib"
-path = "lib/union_find.rs"
-
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+path = "src/graph/graph.rs"
 
 [dependencies]
 proconio = "0.4.3"
