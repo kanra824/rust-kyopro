@@ -24,6 +24,9 @@ fn input_lines<T: FromStr>(n: usize) -> Vec<T> {
     v
 }
 
+const MOD998: i64 = 998244353;
+const MOD107: i64 = 1000000007;
+
 fn solve(n: usize) {
     ()
 }
