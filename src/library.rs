@@ -2,5 +2,5 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
-pub mod union_find;
+pub mod structure;
 pub mod graph;
