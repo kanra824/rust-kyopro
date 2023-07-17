@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use anyhow::Result;
 
 
 fn problem_id_from_str<'de, D>(deserializer: D) -> Result<i32, D::Error>
@@ -51,7 +52,7 @@ pub struct Testcase {
 }
 
 // testcase の Header を取得する。これで問題数がわかる
-pub async fn get_testcase_header(id: i32) -> Result<TestcaseHeader, reqwest::Error> {
+pub async fn get_testcase_header(id: i32) -> Result<TestcaseHeader> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/header", id);
     let body = reqwest::get(path)
         .await?
@@ -60,7 +61,7 @@ pub async fn get_testcase_header(id: i32) -> Result<TestcaseHeader, reqwest::Err
     Ok(body)
 }
 
-pub async fn get_testcase(id: i32, serial: i32) -> Result<Testcase, reqwest::Error> {
+pub async fn get_testcase(id: i32, serial: i32) -> Result<Testcase> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/{}", id, serial);
     let body = reqwest::get(path)
         .await?
@@ -69,10 +70,9 @@ pub async fn get_testcase(id: i32, serial: i32) -> Result<Testcase, reqwest::Err
     Ok(body)
 }
 
-pub async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<(), std::io::Error> {
+pub async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
     let body = get_testcase(id, serial)
-                        .await
-                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                        .await?;
 
     eprintln!("{:?}", body);
     let formatted_serial = format!("{:>04}", serial);
@@ -80,20 +80,20 @@ pub async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<(), std::
     let path_input = format!("save_input/{}/{}.txt", id, formatted_serial);
     // 必要なディレクトリを作成
     let prefix_input = Path::new(&path_input).parent().unwrap();
-    std::fs::create_dir_all(prefix_input).unwrap();
+    std::fs::create_dir_all(prefix_input)?;
 
     // ファイルに保存
-    let mut file = File::create(path_input).unwrap();
+    let mut file = File::create(path_input)?;
     write!(file, "{}", body.input)?;
     file.flush()?;
 
     let path_output = format!("save_output/{}/{}.txt", id, formatted_serial);
     // 必要なディレクトリを作成
     let prefix_output = Path::new(&path_output).parent().unwrap();
-    std::fs::create_dir_all(prefix_output).unwrap();
+    std::fs::create_dir_all(prefix_output)?;
 
     // ファイルに保存
-    let mut file = File::create(path_output).unwrap();
+    let mut file = File::create(path_output)?;
     write!(file, "{}", body.output)?;
     file.flush()?;
 
@@ -101,13 +101,13 @@ pub async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<(), std::
     Ok(())
 }
 
-pub async fn get_all_testcase_and_savefile(id: i32) -> Result<(), reqwest::Error> {
+pub async fn get_all_testcase_and_savefile(id: i32) -> Result<()> {
     let testcase_header = get_testcase_header(id).await?;
 
     for header in testcase_header.headers {
         let serial = header.serial;
         eprintln!("downloading {:?}", header.name);
-        get_testcase_and_savefile(id, serial).await.unwrap();
+        get_testcase_and_savefile(id, serial).await?;
     }
 
     Ok(())
@@ -116,29 +116,33 @@ pub async fn get_all_testcase_and_savefile(id: i32) -> Result<(), reqwest::Error
 
 // ----- Test -----
 #[tokio::test]
-async fn test_get_testcase_header() {
+async fn test_get_testcase_header() -> Result<()> {
     let id = 2439;
-    let body = get_testcase_header(id).await.unwrap();
+    let body = get_testcase_header(id).await?;
     eprintln!("{:?}", body);
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_get_testcase() {
+async fn test_get_testcase() -> Result<()> {
     let id = 2439;
     let serial = 23;
-    let body = get_testcase(id, serial).await.unwrap();
+    let body = get_testcase(id, serial).await?;
     eprintln!("{:?}", body);
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_get_testcase_and_savefile() {
+async fn test_get_testcase_and_savefile() -> Result<()> {
     let id = 2439;
     let serial = 23;
-    get_testcase_and_savefile(id, serial).await.unwrap();
+    get_testcase_and_savefile(id, serial).await?;
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_get_all_testcases_and_savefile() {
+async fn test_get_all_testcases_and_savefile() -> Result<()> {
     let id = 2439;
-    get_all_testcase_and_savefile(id).await.unwrap();
+    get_all_testcase_and_savefile(id).await?;
+    Ok(())
 }
