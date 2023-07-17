@@ -1,6 +1,5 @@
 use reqwest;
 use serde::{de, Deserialize, Deserializer};
-use serde_json::json;
 use std::str::FromStr;
 use std::fs::File;
 use std::io::Write;
@@ -74,7 +73,6 @@ pub async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
     let body = get_testcase(id, serial)
                         .await?;
 
-    eprintln!("{:?}", body);
     let formatted_serial = format!("{:>04}", serial);
 
     let path_input = format!("save_input/{}/{}.txt", id, formatted_serial);
