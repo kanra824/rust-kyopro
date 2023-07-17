@@ -1,6 +1,5 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
+#![allow(unused)]
 
 pub mod structure;
 pub mod graph;
+pub mod aoj;
