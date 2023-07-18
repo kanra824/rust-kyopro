@@ -1,12 +1,13 @@
-use std::fs::File;
-use std::thread;
-use std::io::{Read, Write};
-use std::time::{Duration, Instant};
-use pipe;
 use crate::library::aoj::get_all_testcase_and_savefile;
+use pipe;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::ops::Fn;
+use std::thread;
+use std::time::{Duration, Instant};
 
 enum Compare {
-    EXACT
+    EXACT,
 }
 
 #[derive(PartialEq, Eq)]
@@ -20,16 +21,30 @@ enum TestcaseResult {
     IE,
 }
 
-pub fn judge(id: &String, solver: fn() -> String) -> anyhow::Result<bool> {
+fn read_file(path: &String) -> anyhow::Result<String> {
+    let mut f = File::open(path)?;
+    let mut s = String::new();
+    f.read_to_string(&mut s)?;
+    Ok(s)
+}
+
+pub fn judge<F>(id: &str, solver: F) -> anyhow::Result<bool>
+where
+    F: Fn(),
+{
     // testcase をダウンロード
     get_all_testcase_and_savefile(id, true);
 
     // testcase の個数を取得
-    let path = format!("save_testcase_num/{id}.txt");
-    let mut f = File::open(path)?;
-    let mut testcase_num = String::new();
-    f.read_to_string(&mut testcase_num)?;
+    let path = format!(".cache_rust_kyopro/testcase_num/{id}.txt");
+    let testcase_num = read_file(&path)?;
     let testcase_num = testcase_num.trim().parse::<i32>()?;
+
+    // time limit を取得
+    let path = format!(".cache_rust_kyopro/time_limit/{id}.txt");
+    let time_limit = read_file(&path)?;
+    let time_limit = time_limit.trim().parse::<i32>()?;
+
     let mut all_ac = true;
     for i in 0..testcase_num {
         let result = judge_testcase(id, i, time_limit, solver).unwrap();
@@ -41,7 +56,15 @@ pub fn judge(id: &String, solver: fn() -> String) -> anyhow::Result<bool> {
     Ok(all_ac)
 }
 
-fn judge_testcase(id: &String, serial: i32, time_limit: i32 , solver: fn() -> String) -> anyhow::Result<TestcaseResult> {
+fn judge_testcase<F>(
+    id: &str,
+    serial: i32,
+    time_limit: i32,
+    solver: F,
+) -> anyhow::Result<TestcaseResult>
+where
+    F: Fn(),
+{
     // input 読み込み
     let file_name_input = format!("save_input/{}/{}.txt", id, serial);
     let mut f_input = File::open(file_name_input)?;

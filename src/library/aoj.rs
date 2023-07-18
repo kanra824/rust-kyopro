@@ -15,6 +15,13 @@ where
 }
 
 #[derive(Deserialize, Debug)]
+pub struct ProblemDescription {
+    problem_id: String,
+    time_limit: i32,
+    memory_limit: i32,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct HeaderElm {
     serial: i32,
     name: String,
@@ -43,7 +50,7 @@ pub struct Testcase {
     output: String,
 }
 
-fn save_to_file(path: &Path, contents: &String) -> anyhow::Result<()> {
+fn save_to_file(path: &Path, contents: &str) -> anyhow::Result<()> {
     // 必要なディレクトリを作成
     let prefix_input = path.parent().unwrap();
     std::fs::create_dir_all(prefix_input)?;
@@ -55,20 +62,27 @@ fn save_to_file(path: &Path, contents: &String) -> anyhow::Result<()> {
     Ok(())
 }
 
+// 問題の詳細を取得
+async fn get_problem_description(id: &str) -> anyhow::Result<ProblemDescription> {
+    let path = format!("https://judgeapi.u-aizu.ac.jp/resources/descriptions/Rust/{}", id);
+    let body = reqwest::get(path).await?.json::<ProblemDescription>().await?;
+    Ok(body)
+}
+
 // testcase の Header を取得する。これで問題数がわかる
-async fn get_testcase_header(id: &String) -> anyhow::Result<TestcaseHeader> {
+async fn get_testcase_header(id: &str) -> anyhow::Result<TestcaseHeader> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/header", id);
     let body = reqwest::get(path).await?.json::<TestcaseHeader>().await?;
     Ok(body)
 }
 
-async fn get_testcase(id: &String, serial: i32) -> anyhow::Result<Testcase> {
+async fn get_testcase(id: &str, serial: i32) -> anyhow::Result<Testcase> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/{}", id, serial);
     let body = reqwest::get(path).await?.json::<Testcase>().await?;
     Ok(body)
 }
 
-async fn get_testcase_and_savefile(id: &String, serial: i32) -> anyhow::Result<()> {
+async fn get_testcase_and_savefile(id: &str, serial: i32) -> anyhow::Result<()> {
     let body = get_testcase(id, serial).await?;
 
     let formatted_serial = format!("{:>04}", serial);
@@ -84,7 +98,7 @@ async fn get_testcase_and_savefile(id: &String, serial: i32) -> anyhow::Result<(
     Ok(())
 }
 
-pub async fn get_all_testcase_and_savefile(id: &String, use_cache: bool) -> anyhow::Result<()> {
+pub async fn get_all_testcase_and_savefile(id: &str, use_cache: bool) -> anyhow::Result<()> {
     let testcase_header = get_testcase_header(id).await?;
 
     // テストケース数を保存
@@ -107,6 +121,14 @@ pub async fn get_all_testcase_and_savefile(id: &String, use_cache: bool) -> anyh
 }
 
 // ----- Test -----
+#[tokio::test]
+async fn test_get_problem_description() -> anyhow::Result<()> {
+    let id = String::from("2439");
+    let body = get_problem_description(&id).await?;
+    eprintln!("{:?}", body);
+    Ok(())
+}
+
 #[tokio::test]
 async fn test_get_testcase_header() -> anyhow::Result<()> {
     let id = String::from("2439");
