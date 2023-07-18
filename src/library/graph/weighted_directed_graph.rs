@@ -7,7 +7,10 @@ pub struct WeightedDirectedGraph {
 
 impl WeightedDirectedGraph {
     pub fn new(n: usize) -> Self {
-        WeightedDirectedGraph { n, g: vec![Vec::new();n] }
+        WeightedDirectedGraph {
+            n,
+            g: vec![Vec::new(); n],
+        }
     }
 
     pub fn add_edge(&mut self, a: usize, b: usize, cost: Cost) {

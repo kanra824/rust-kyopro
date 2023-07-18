@@ -14,11 +14,7 @@ impl UnionFind {
             par.push(i);
         }
         let sz = vec![1; n];
-        UnionFind {
-            _n: n,
-            par,
-            sz,
-        }
+        UnionFind { _n: n, par, sz }
     }
 
     pub fn root(&mut self, x: usize) -> usize {
@@ -57,7 +53,7 @@ impl UnionFind {
 //         q: usize,
 //         query: [(i32, usize, usize); q],
 //     }
-// 
+//
 //     let mut uf = UnionFind::new(n);
 //     for (com, x, y) in query {
 //         if com == 0 {

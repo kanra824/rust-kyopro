@@ -5,7 +5,10 @@ struct UndirectedGraph {
 
 impl UndirectedGraph {
     pub fn new(n: usize) -> Self {
-        UndirectedGraph { n: n, g: vec![Vec::new(); n] }
+        UndirectedGraph {
+            n: n,
+            g: vec![Vec::new(); n],
+        }
     }
 
     pub fn add_edge(&mut self, a: usize, b: usize) {
