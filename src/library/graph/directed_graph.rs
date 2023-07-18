@@ -5,13 +5,15 @@ pub struct DirectedGraph {
 
 impl DirectedGraph {
     pub fn new(n: usize) -> Self {
-        DirectedGraph { n: n, g: vec![Vec::new(); n] }
+        DirectedGraph {
+            n: n,
+            g: vec![Vec::new(); n],
+        }
     }
 
     pub fn add_edge(&mut self, a: usize, b: usize) {
         self.g.get_mut(a).unwrap().push(b);
     }
-
 }
 
 // ----- Test -----
