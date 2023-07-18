@@ -51,19 +51,19 @@ pub struct Testcase {
 }
 
 // testcase の Header を取得する。これで問題数がわかる
-async fn get_testcase_header(id: i32) -> Result<TestcaseHeader> {
+async fn get_testcase_header(id: i32) -> anyhow::Result<TestcaseHeader> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/header", id);
     let body = reqwest::get(path).await?.json::<TestcaseHeader>().await?;
     Ok(body)
 }
 
-async fn get_testcase(id: i32, serial: i32) -> Result<Testcase> {
+async fn get_testcase(id: i32, serial: i32) -> anyhow::Result<Testcase> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/{}", id, serial);
     let body = reqwest::get(path).await?.json::<Testcase>().await?;
     Ok(body)
 }
 
-async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
+async fn get_testcase_and_savefile(id: i32, serial: i32) -> anyhow::Result<()> {
     let body = get_testcase(id, serial).await?;
 
     let formatted_serial = format!("{:>04}", serial);
@@ -91,11 +91,15 @@ async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
     Ok(())
 }
 
-pub async fn get_all_testcase_and_savefile(id: i32) -> anyhow::Result<()> {
+pub async fn get_all_testcase_and_savefile(id: i32, use_cache: bool) -> anyhow::Result<()> {
     let testcase_header = get_testcase_header(id).await?;
 
     // テストケース数を保存
     let path = format!("save_testcase_num/{id}.txt");
+    // パスが存在すればダウンロード済みなのでreturn
+    if Path::new(&path).exists() && use_cache {
+        return Ok(());
+    }
     let mut file = File::create(path)?;
     write!(file, "{}", testcase_header.headers.len())?;
     file.flush()?;
@@ -139,6 +143,6 @@ async fn test_get_testcase_and_savefile() -> anyhow::Result<()> {
 #[tokio::test]
 async fn test_get_all_testcases_and_savefile() -> anyhow::Result<()> {
     let id = 2439;
-    get_all_testcase_and_savefile(id).await?;
+    get_all_testcase_and_savefile(id, true).await?;
     Ok(())
 }

@@ -3,21 +3,13 @@ use std::thread;
 use std::io::{Read, Write};
 use std::time::{Duration, Instant};
 use pipe;
+use crate::library::aoj::get_all_testcase_and_savefile;
 
 enum Compare {
     EXACT
 }
 
-enum JudgeResult {
-    AC,
-    WA,
-    TLE,
-    RE,
-    MLE,
-    CE,
-    IE,
-}
-
+#[derive(PartialEq, Eq)]
 enum TestcaseResult {
     AC,
     WA,
@@ -28,14 +20,17 @@ enum TestcaseResult {
     IE,
 }
 
-fn judge(id: i32, time_limit: i32, solver: fn() -> String) -> anyhow::Result<bool> {
+pub fn judge(id: i32, time_limit: i32, solver: fn() -> String) -> anyhow::Result<bool> {
+    // testcase をダウンロード
+    get_all_testcase_and_savefile(id, true);
+
     // testcase の個数を取得
     let path = format!("save_testcase_num/{id}.txt");
     let mut f = File::open(path)?;
     let mut testcase_num = String::new();
     f.read_to_string(&mut testcase_num)?;
     let testcase_num = testcase_num.trim().parse::<i32>()?;
-    let all_ac = true;
+    let mut all_ac = true;
     for i in 0..testcase_num {
         let result = judge_testcase(id, i, time_limit, solver).unwrap();
         if result != TestcaseResult::AC {
@@ -69,12 +64,12 @@ fn judge_testcase(id: i32, serial: i32, time_limit: i32 , solver: fn() -> String
     th.join().unwrap();
     let end = start.elapsed();
 
-    // let mut result = String::new();
-    // read.read_to_string(&mut result).unwrap();
+    let mut result = String::new();
+    read.read_to_string(&mut result).unwrap();
 
     // output と result を比較 compare(output, result);
     let res = compare(output, result, Compare::EXACT);
-    Ok()
+    Ok(TestcaseResult::AC)
 }
 
 fn compare(output: String, result: String, cmp: Compare) -> bool {
