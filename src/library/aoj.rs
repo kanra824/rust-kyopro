@@ -4,7 +4,6 @@ use std::str::FromStr;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use anyhow::Result;
 
 
 fn problem_id_from_str<'de, D>(deserializer: D) -> Result<i32, D::Error>
@@ -51,7 +50,7 @@ pub struct Testcase {
 }
 
 // testcase の Header を取得する。これで問題数がわかる
-pub async fn get_testcase_header(id: i32) -> Result<TestcaseHeader> {
+pub async fn get_testcase_header(id: i32) -> anyhow::Result<TestcaseHeader> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/header", id);
     let body = reqwest::get(path)
         .await?
@@ -60,7 +59,7 @@ pub async fn get_testcase_header(id: i32) -> Result<TestcaseHeader> {
     Ok(body)
 }
 
-pub async fn get_testcase(id: i32, serial: i32) -> Result<Testcase> {
+pub async fn get_testcase(id: i32, serial: i32) -> anyhow::Result<Testcase> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/{}", id, serial);
     let body = reqwest::get(path)
         .await?
@@ -69,7 +68,7 @@ pub async fn get_testcase(id: i32, serial: i32) -> Result<Testcase> {
     Ok(body)
 }
 
-pub async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
+pub async fn get_testcase_and_savefile(id: i32, serial: i32) -> anyhow::Result<()> {
     let body = get_testcase(id, serial)
                         .await?;
 
@@ -99,7 +98,7 @@ pub async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
     Ok(())
 }
 
-pub async fn get_all_testcase_and_savefile(id: i32) -> Result<()> {
+pub async fn get_all_testcase_and_savefile(id: i32) -> anyhow::Result<()> {
     let testcase_header = get_testcase_header(id).await?;
 
     for header in testcase_header.headers {
@@ -114,7 +113,7 @@ pub async fn get_all_testcase_and_savefile(id: i32) -> Result<()> {
 
 // ----- Test -----
 #[tokio::test]
-async fn test_get_testcase_header() -> Result<()> {
+async fn test_get_testcase_header() -> anyhow::Result<()> {
     let id = 2439;
     let body = get_testcase_header(id).await?;
     eprintln!("{:?}", body);
@@ -122,7 +121,7 @@ async fn test_get_testcase_header() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_get_testcase() -> Result<()> {
+async fn test_get_testcase() -> anyhow::Result<()> {
     let id = 2439;
     let serial = 23;
     let body = get_testcase(id, serial).await?;
@@ -131,7 +130,7 @@ async fn test_get_testcase() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_get_testcase_and_savefile() -> Result<()> {
+async fn test_get_testcase_and_savefile() -> anyhow::Result<()> {
     let id = 2439;
     let serial = 23;
     get_testcase_and_savefile(id, serial).await?;
@@ -139,7 +138,7 @@ async fn test_get_testcase_and_savefile() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_get_all_testcases_and_savefile() -> Result<()> {
+async fn test_get_all_testcases_and_savefile() -> anyhow::Result<()> {
     let id = 2439;
     get_all_testcase_and_savefile(id).await?;
     Ok(())
