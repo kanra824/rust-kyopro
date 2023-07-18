@@ -20,7 +20,7 @@ enum TestcaseResult {
     IE,
 }
 
-pub fn judge(id: i32, time_limit: i32, solver: fn() -> String) -> anyhow::Result<bool> {
+pub fn judge(id: &String, solver: fn() -> String) -> anyhow::Result<bool> {
     // testcase をダウンロード
     get_all_testcase_and_savefile(id, true);
 
@@ -41,7 +41,7 @@ pub fn judge(id: i32, time_limit: i32, solver: fn() -> String) -> anyhow::Result
     Ok(all_ac)
 }
 
-fn judge_testcase(id: i32, serial: i32, time_limit: i32 , solver: fn() -> String) -> anyhow::Result<TestcaseResult> {
+fn judge_testcase(id: &String, serial: i32, time_limit: i32 , solver: fn() -> String) -> anyhow::Result<TestcaseResult> {
     // input 読み込み
     let file_name_input = format!("save_input/{}/{}.txt", id, serial);
     let mut f_input = File::open(file_name_input)?;

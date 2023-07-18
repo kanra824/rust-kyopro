@@ -5,14 +5,6 @@ use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
 
-fn problem_id_from_str<'de, D>(deserializer: D) -> Result<i32, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    i32::from_str(&s).map_err(de::Error::custom)
-}
-
 fn remove_escape_of_newline<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
@@ -34,15 +26,15 @@ pub struct HeaderElm {
 
 #[derive(Deserialize, Debug)]
 pub struct TestcaseHeader {
-    #[serde(rename = "problemId", deserialize_with = "problem_id_from_str")]
-    problem_id: i32,
+    #[serde(rename = "problemId")]
+    problem_id: String,
     headers: Vec<HeaderElm>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Testcase {
-    #[serde(rename = "problemId", deserialize_with = "problem_id_from_str")]
-    problem_id: i32,
+    #[serde(rename = "problemId")]
+    problem_id: String,
     serial: i32,
     #[serde(rename = "in", deserialize_with = "remove_escape_of_newline")]
     input: String,
@@ -51,19 +43,19 @@ pub struct Testcase {
 }
 
 // testcase の Header を取得する。これで問題数がわかる
-async fn get_testcase_header(id: i32) -> anyhow::Result<TestcaseHeader> {
+async fn get_testcase_header(id: &String) -> anyhow::Result<TestcaseHeader> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/header", id);
     let body = reqwest::get(path).await?.json::<TestcaseHeader>().await?;
     Ok(body)
 }
 
-async fn get_testcase(id: i32, serial: i32) -> anyhow::Result<Testcase> {
+async fn get_testcase(id: &String, serial: i32) -> anyhow::Result<Testcase> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/{}", id, serial);
     let body = reqwest::get(path).await?.json::<Testcase>().await?;
     Ok(body)
 }
 
-async fn get_testcase_and_savefile(id: i32, serial: i32) -> anyhow::Result<()> {
+async fn get_testcase_and_savefile(id: &String, serial: i32) -> anyhow::Result<()> {
     let body = get_testcase(id, serial).await?;
 
     let formatted_serial = format!("{:>04}", serial);
@@ -91,7 +83,7 @@ async fn get_testcase_and_savefile(id: i32, serial: i32) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn get_all_testcase_and_savefile(id: i32, use_cache: bool) -> anyhow::Result<()> {
+pub async fn get_all_testcase_and_savefile(id: &String, use_cache: bool) -> anyhow::Result<()> {
     let testcase_header = get_testcase_header(id).await?;
 
     // テストケース数を保存
@@ -117,32 +109,32 @@ pub async fn get_all_testcase_and_savefile(id: i32, use_cache: bool) -> anyhow::
 // ----- Test -----
 #[tokio::test]
 async fn test_get_testcase_header() -> anyhow::Result<()> {
-    let id = 2439;
-    let body = get_testcase_header(id).await?;
+    let id = String::from("2439");
+    let body = get_testcase_header(&id).await?;
     eprintln!("{:?}", body);
     Ok(())
 }
 
 #[tokio::test]
 async fn test_get_testcase() -> anyhow::Result<()> {
-    let id = 2439;
+    let id = String::from("2439");
     let serial = 23;
-    let body = get_testcase(id, serial).await?;
+    let body = get_testcase(&id, serial).await?;
     eprintln!("{:?}", body);
     Ok(())
 }
 
 #[tokio::test]
 async fn test_get_testcase_and_savefile() -> anyhow::Result<()> {
-    let id = 2439;
+    let id = String::from("2439");
     let serial = 23;
-    get_testcase_and_savefile(id, serial).await?;
+    get_testcase_and_savefile(&id, serial).await?;
     Ok(())
 }
 
 #[tokio::test]
 async fn test_get_all_testcases_and_savefile() -> anyhow::Result<()> {
-    let id = 2439;
-    get_all_testcase_and_savefile(id, true).await?;
+    let id = String::from("2439");
+    get_all_testcase_and_savefile(&id, true).await?;
     Ok(())
 }
