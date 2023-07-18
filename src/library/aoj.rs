@@ -1,5 +1,6 @@
 use reqwest;
 use serde::{de, Deserialize, Deserializer};
+use std::any;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -42,6 +43,18 @@ pub struct Testcase {
     output: String,
 }
 
+fn save_to_file(path: &Path, contents: &String) -> anyhow::Result<()> {
+    // 必要なディレクトリを作成
+    let prefix_input = path.parent().unwrap();
+    std::fs::create_dir_all(prefix_input)?;
+
+    // ファイルに保存
+    let mut file = File::create(path)?;
+    write!(file, "{}", contents)?;
+    file.flush()?;
+    Ok(())
+}
+
 // testcase の Header を取得する。これで問題数がわかる
 async fn get_testcase_header(id: &String) -> anyhow::Result<TestcaseHeader> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/header", id);
@@ -60,25 +73,13 @@ async fn get_testcase_and_savefile(id: &String, serial: i32) -> anyhow::Result<(
 
     let formatted_serial = format!("{:>04}", serial);
 
-    let path_input = format!("save_input/{}/{}.txt", id, formatted_serial);
-    // 必要なディレクトリを作成
-    let prefix_input = Path::new(&path_input).parent().unwrap();
-    std::fs::create_dir_all(prefix_input)?;
+    let path_input = format!(".cache_rust_kyopro/input/{}/{}.txt", id, formatted_serial);
+    let path_input = Path::new(&path_input);
+    save_to_file(path_input, &body.input)?;
 
-    // ファイルに保存
-    let mut file = File::create(path_input)?;
-    write!(file, "{}", body.input)?;
-    file.flush()?;
-
-    let path_output = format!("save_output/{}/{}.txt", id, formatted_serial);
-    // 必要なディレクトリを作成
-    let prefix_output = Path::new(&path_output).parent().unwrap();
-    std::fs::create_dir_all(prefix_output)?;
-
-    // ファイルに保存
-    let mut file = File::create(path_output)?;
-    write!(file, "{}", body.output)?;
-    file.flush()?;
+    let path_output = format!(".cache_rust_kyopro/output/{}/{}.txt", id, formatted_serial);
+    let path_output = Path::new(&path_output);
+    save_to_file(path_output, &body.output)?;
 
     Ok(())
 }
@@ -88,13 +89,12 @@ pub async fn get_all_testcase_and_savefile(id: &String, use_cache: bool) -> anyh
 
     // テストケース数を保存
     let path = format!("save_testcase_num/{id}.txt");
+    let path = Path::new(&path);
     // パスが存在すればダウンロード済みなのでreturn
-    if Path::new(&path).exists() && use_cache {
+    if path.exists() && use_cache {
         return Ok(());
     }
-    let mut file = File::create(path)?;
-    write!(file, "{}", testcase_header.headers.len())?;
-    file.flush()?;
+    save_to_file(path, &testcase_header.headers.len().to_string())?;
 
     // 各テストケースを取得して保存
     for header in testcase_header.headers {
