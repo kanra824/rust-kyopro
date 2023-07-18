@@ -51,7 +51,7 @@ pub struct Testcase {
 }
 
 // testcase の Header を取得する。これで問題数がわかる
-pub async fn get_testcase_header(id: i32) -> Result<TestcaseHeader> {
+async fn get_testcase_header(id: i32) -> Result<TestcaseHeader> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/header", id);
     let body = reqwest::get(path)
         .await?
@@ -60,7 +60,7 @@ pub async fn get_testcase_header(id: i32) -> Result<TestcaseHeader> {
     Ok(body)
 }
 
-pub async fn get_testcase(id: i32, serial: i32) -> Result<Testcase> {
+async fn get_testcase(id: i32, serial: i32) -> Result<Testcase> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/{}", id, serial);
     let body = reqwest::get(path)
         .await?
@@ -69,7 +69,7 @@ pub async fn get_testcase(id: i32, serial: i32) -> Result<Testcase> {
     Ok(body)
 }
 
-pub async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
+async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
     let body = get_testcase(id, serial)
                         .await?;
 
@@ -102,6 +102,13 @@ pub async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
 pub async fn get_all_testcase_and_savefile(id: i32) -> Result<()> {
     let testcase_header = get_testcase_header(id).await?;
 
+    // テストケース数を保存
+    let path = format!("save_testcase_num/{id}.txt");
+    let mut file = File::create(path)?;
+    write!(file, "{}", testcase_header.headers.len())?;
+    file.flush()?;
+
+    // 各テストケースを取得して保存
     for header in testcase_header.headers {
         let serial = header.serial;
         eprintln!("downloading {:?}", header.name);
