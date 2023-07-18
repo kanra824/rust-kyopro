@@ -6,7 +6,10 @@ struct WeightedUndirectedGraph {
 
 impl WeightedUndirectedGraph {
     pub fn new(n: usize) -> Self {
-        WeightedUndirectedGraph { n, g: vec![Vec::new();n] }
+        WeightedUndirectedGraph {
+            n,
+            g: vec![Vec::new(); n],
+        }
     }
 
     pub fn add_edge(&mut self, a: usize, b: usize, cost: Cost) {
@@ -22,5 +25,8 @@ fn test_add_edge() {
     graph.add_edge(0, 1, 1);
     graph.add_edge(1, 2, 2);
 
-    assert_eq!(graph.g, vec![vec![(1, 1)], vec![(0, 1), (2, 2)], vec![(1, 2)]]);
+    assert_eq!(
+        graph.g,
+        vec![vec![(1, 1)], vec![(0, 1), (2, 2)], vec![(1, 2)]]
+    );
 }

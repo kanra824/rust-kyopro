@@ -1,20 +1,21 @@
 use reqwest;
 use serde::{de, Deserialize, Deserializer};
-use std::str::FromStr;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-
+use std::str::FromStr;
 
 fn problem_id_from_str<'de, D>(deserializer: D) -> Result<i32, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
     i32::from_str(&s).map_err(de::Error::custom)
 }
 
 fn remove_escape_of_newline<'de, D>(deserializer: D) -> Result<String, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
     Ok(s.replace("\\n", "\n"))
@@ -35,7 +36,7 @@ pub struct HeaderElm {
 pub struct TestcaseHeader {
     #[serde(rename = "problemId", deserialize_with = "problem_id_from_str")]
     problem_id: i32,
-    headers: Vec<HeaderElm>
+    headers: Vec<HeaderElm>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -52,25 +53,18 @@ pub struct Testcase {
 // testcase の Header を取得する。これで問題数がわかる
 async fn get_testcase_header(id: i32) -> Result<TestcaseHeader> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/header", id);
-    let body = reqwest::get(path)
-        .await?
-        .json::<TestcaseHeader>()
-        .await?;
+    let body = reqwest::get(path).await?.json::<TestcaseHeader>().await?;
     Ok(body)
 }
 
 async fn get_testcase(id: i32, serial: i32) -> Result<Testcase> {
     let path = format!("https://judgedat.u-aizu.ac.jp/testcases/{}/{}", id, serial);
-    let body = reqwest::get(path)
-        .await?
-        .json::<Testcase>()
-        .await?;
+    let body = reqwest::get(path).await?.json::<Testcase>().await?;
     Ok(body)
 }
 
 async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
-    let body = get_testcase(id, serial)
-                        .await?;
+    let body = get_testcase(id, serial).await?;
 
     let formatted_serial = format!("{:>04}", serial);
 
@@ -94,7 +88,6 @@ async fn get_testcase_and_savefile(id: i32, serial: i32) -> Result<()> {
     write!(file, "{}", body.output)?;
     file.flush()?;
 
-
     Ok(())
 }
 
@@ -116,7 +109,6 @@ pub async fn get_all_testcase_and_savefile(id: i32) -> anyhow::Result<()> {
 
     Ok(())
 }
-
 
 // ----- Test -----
 #[tokio::test]
