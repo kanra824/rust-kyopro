@@ -1,5 +1,5 @@
-//use proconio::input;
-//use proconio::marker::{Usize1, Isize1};
+use proconio::input;
+use crate::library::judge::judge;
 
 pub struct UnionFind {
     _n: usize,
@@ -47,23 +47,25 @@ impl UnionFind {
     }
 }
 
-// fn main() {
-//     input! {
-//         n: usize,
-//         q: usize,
-//         query: [(i32, usize, usize); q],
-//     }
-//
-//     let mut uf = UnionFind::new(n);
-//     for (com, x, y) in query {
-//         if com == 0 {
-//             uf.unite(x, y);
-//         } else {
-//             if uf.same(x, y) {
-//                 println!("Yes");
-//             } else {
-//                 println!("No");
-//             }
-//         }
-//     }
-// }
+#[test]
+fn test_union_find() {
+    let solver = || {
+        input! {
+            n: usize,
+            q: usize,
+            queries: [(usize, usize, usize); q],
+        }
+
+        let mut uf = UnionFind::new(n);
+        for (t, u, v) in queries {
+            if t == 0 {
+                uf.unite(u, v);
+            } else {
+                println!("{}", if uf.same(u, v) { 1 } else { 0 });
+            }
+        }
+    };
+
+    judge("DSL_1_A", solver).unwrap();
+
+}
