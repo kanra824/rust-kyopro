@@ -1,3 +1,4 @@
 target/
 save_input/
 save_output/
+.vscode/
