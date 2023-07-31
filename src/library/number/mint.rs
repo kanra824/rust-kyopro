@@ -172,94 +172,90 @@ impl<const MOD: i64> ops::DivAssign<i64> for Modint<MOD> {
     }
 }
 
-#[test]
-fn test_add() {
-    type Mint = Modint<998244353>;
-    let m1 = Mint { x: 100 };
-    let m2 = Mint { x: 110 };
-    let m3 = 998244253;
+#[cfg(test)]
+mod tests{
+    type Mint = super::Modint<998244353>;
+    #[test]
+    fn test_add() {
+        let m1 = Mint { x: 100 };
+        let m2 = Mint { x: 110 };
+        let m3 = 998244253;
 
-    assert_eq!(m1 + m2, Mint { x: 210 });
-    assert_eq!(m1 + m3, Mint { x: 0 });
-}
+        assert_eq!(m1 + m2, Mint { x: 210 });
+        assert_eq!(m1 + m3, Mint { x: 0 });
+    }
 
-#[test]
-fn test_sub() {
-    type Mint = Modint<998244353>;
-    let m1 = Mint { x: 100 };
-    let m2 = Mint { x: 110 };
-    let m3 = 998244253;
+    #[test]
+    fn test_sub() {
+        let m1 = Mint { x: 100 };
+        let m2 = Mint { x: 110 };
+        let m3 = 998244253;
 
-    assert_eq!(m1 - m2, Mint { x: 998244343 });
-    assert_eq!(m1 - m3, Mint { x: 200 });
-}
+        assert_eq!(m1 - m2, Mint { x: 998244343 });
+        assert_eq!(m1 - m3, Mint { x: 200 });
+    }
 
-#[test]
-fn test_mul() {
-    type Mint = Modint<998244353>;
-    let m1 = Mint { x: 100 };
-    let m2 = Mint { x: 110 };
-    let m3 = 998244253;
+    #[test]
+    fn test_mul() {
+        let m1 = Mint { x: 100 };
+        let m2 = Mint { x: 110 };
+        let m3 = 998244253;
 
-    assert_eq!(m1 * m2, Mint { x: 11000 });
-    assert_eq!(m1 * m3, Mint { x: 998234353 });
-}
+        assert_eq!(m1 * m2, Mint { x: 11000 });
+        assert_eq!(m1 * m3, Mint { x: 998234353 });
+    }
 
-#[test]
-fn test_div() {
-    type Mint = Modint<998244353>;
-    let m1 = Mint { x: 100 };
-    let m2 = Mint { x: 110 };
-    let m3 = 998244253;
+    #[test]
+    fn test_div() {
+        let m1 = Mint { x: 100 };
+        let m2 = Mint { x: 110 };
+        let m3 = 998244253;
 
-    assert_eq!(m1 / m2, Mint { x: 725995894 });
-    assert_eq!(m1 / m3, Mint { x: 998244352 });
-}
+        assert_eq!(m1 / m2, Mint { x: 725995894 });
+        assert_eq!(m1 / m3, Mint { x: 998244352 });
+    }
 
-#[test]
-fn test_add_assign() {
-    type Mint = Modint<998244353>;
-    let mut m1 = Mint { x: 100 };
-    let mut m2 = Mint { x: 100 };
-    let m3 = Mint { x: 110 };
-    m1 += Mint { x: 10 };
-    m2 += 10;
-    assert_eq!(m1, m3);
-    assert_eq!(m2, m3);
-}
+    #[test]
+    fn test_add_assign() {
+        let mut m1 = Mint { x: 100 };
+        let mut m2 = Mint { x: 100 };
+        let m3 = Mint { x: 110 };
+        m1 += Mint { x: 10 };
+        m2 += 10;
+        assert_eq!(m1, m3);
+        assert_eq!(m2, m3);
+    }
 
-#[test]
-fn test_sub_assign() {
-    type Mint = Modint<998244353>;
-    let mut m1 = Mint { x: 110 };
-    let mut m2 = Mint {x: 110};
-    let m3 = Mint { x: 100 };
-    m1 -= Mint { x: 10 };
-    m2 -= 10;
-    assert_eq!(m1, m3);
-    assert_eq!(m2, m3);
-}
+    #[test]
+    fn test_sub_assign() {
+        let mut m1 = Mint { x: 110 };
+        let mut m2 = Mint {x: 110};
+        let m3 = Mint { x: 100 };
+        m1 -= Mint { x: 10 };
+        m2 -= 10;
+        assert_eq!(m1, m3);
+        assert_eq!(m2, m3);
+    }
 
-#[test]
-fn test_mul_assign() {
-    type Mint = Modint<998244353>;
-    let mut m1 = Mint { x: 100 };
-    let mut m2 = Mint { x: 100 };
-    let m3 = Mint { x: 200 };
-    m1 *= Mint { x: 2 };
-    m2 *= 2;
-    assert_eq!(m1, m3);
-    assert_eq!(m2, m3);
-}
+    #[test]
+    fn test_mul_assign() {
+        let mut m1 = Mint { x: 100 };
+        let mut m2 = Mint { x: 100 };
+        let m3 = Mint { x: 200 };
+        m1 *= Mint { x: 2 };
+        m2 *= 2;
+        assert_eq!(m1, m3);
+        assert_eq!(m2, m3);
+    }
 
-#[test]
-fn test_div_assign() {
-    type Mint = Modint<998244353>;
-    let mut m1 = Mint { x: 200 };
-    let mut m2 = Mint { x: 200 };
-    let m3 = Mint { x: 100 };
-    m1 /= Mint { x: 2 };
-    m2 /= 2;
-    assert_eq!(m1, m3);
-    assert_eq!(m2, m3);
+    #[test]
+    fn test_div_assign() {
+        let mut m1 = Mint { x: 200 };
+        let mut m2 = Mint { x: 200 };
+        let m3 = Mint { x: 100 };
+        m1 /= Mint { x: 2 };
+        m2 /= 2;
+        assert_eq!(m1, m3);
+        assert_eq!(m2, m3);
+    }
 }
