@@ -21,7 +21,7 @@ const MOD998: i64 = 998244353;
 const MOD107: i64 = 1000000007;
 
 #[allow(unused)]
-fn pp<T>(val: T)
+fn pr<T>(val: T)
 where
     T: std::fmt::Display,
 {
