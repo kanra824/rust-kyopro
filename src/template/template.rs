@@ -11,9 +11,11 @@ use proconio::marker::{Chars, Isize1, Usize1};
 #[allow(unused_imports)]
 use proconio::{input, source::line::LineSource};
 #[allow(unused_imports)]
-use std::io::{stdin, stdout, BufReader, Write};
+use std::cmp::{max, min};
+#[allow(unused_imports)]
 use std::collections::*;
-use std::cmp::{min, max};
+#[allow(unused_imports)]
+use std::io::{stdin, stdout, BufReader, Write};
 
 #[allow(unused)]
 const MOD998: i64 = 998244353;
@@ -26,4 +28,12 @@ where
     T: std::fmt::Display,
 {
     println!("{}", val);
+}
+
+#[allow(unused)]
+fn pd<T>(val: T)
+where
+    T: std::fmt::Debug,
+{
+    println!("{:?}", val);
 }

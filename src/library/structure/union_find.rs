@@ -4,7 +4,7 @@
 pub struct UnionFind {
     _n: usize,
     par: Vec<usize>,
-    sz: Vec<i32>,
+    sz: Vec<usize>,
 }
 
 impl UnionFind {
@@ -24,6 +24,11 @@ impl UnionFind {
             self.par[x] = self.root(self.par[x]);
             self.par[x]
         }
+    }
+
+    pub fn get_sz(&self, x: usize) -> usize {
+        let x = self.root(x);
+        self.sz[x]
     }
 
     pub fn unite(&mut self, x: usize, y: usize) {
