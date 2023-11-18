@@ -8,14 +8,37 @@ fn main() {
         a: [Usize1; m],
     }
 
-    let v = vec![0; n];
-    let mut st = SegmentTree::new(n, v, |(a1, b1), (a2, b2)| )
+    let mut v = vec![(0, 0); n];
+    for i in 0..n {
+        v[i].1 = i;
+    }
+    let f = |(a1, b1), (a2, b2)| {
+        if a1 > a2 {
+            (a1, b1)
+        } else if a1 < a2 {
+            (a2, b2)
+        } else {
+            if b1 < b2 {
+                (a1, b1)
+            } else {
+                (a2, b2)
+            }
+        }
+    };
+    let g = |(a, b), (c, _)| (a + c, b);
+    let mut st = SegmentTree::new(n, v, f, g, (usize::MIN, usize::MAX));
+
+    for i in 0..m {
+        st.update(a[i], (1, 0));
+        let (_, val) = st.query(0, n);
+        pr(val+1);
+    }
 
 }
 
 pub struct SegmentTree<T, F, G>
 where
-    T: Clone + Copy,
+    T: Clone + Copy + std::fmt::Debug,
     F: Fn(T, T) -> T,
     G: Fn(T, T) -> T,
 {
@@ -28,7 +51,7 @@ where
 
 impl<T, F, G> SegmentTree<T, F, G>
 where
-    T: Clone + Copy,
+    T: Clone + Copy + std::fmt::Debug,
     F: Fn(T, T) -> T,
     G: Fn(T, T) -> T,
 {
@@ -40,7 +63,7 @@ where
 
         let mut v_ = vec![zero; 2 * n_];
         for i in 0..n {
-            v_[i + 1] = v[i];
+            v_[n_ + i] = v[i];
         }
         for i in (0..=n_ - 1).rev() {
             v_[i] = f(v_[i * 2], v_[i * 2 + 1]);

@@ -25,7 +25,7 @@ where
 
         let mut v_ = vec![zero; 2 * n_];
         for i in 0..n {
-            v_[i + 1] = v[i];
+            v_[n_ + i] = v[i];
         }
         for i in (0..=n_ - 1).rev() {
             v_[i] = f(v_[i * 2], v_[i * 2 + 1]);
