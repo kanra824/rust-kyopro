@@ -4,105 +4,43 @@ fn main() {
     input! {
         // from &mut source,
         n: usize,
-        m: usize,
-        a: [Usize1; m],
+        q: usize,
+        c: [Usize1; n],
+        queries: [(Usize1, Usize1); q],
     }
-
-    let mut v = vec![(0, 0); n];
+    let mut idx = vec![0; n];
     for i in 0..n {
-        v[i].1 = i;
+        idx[i] = i;
     }
-    let f = |(a1, b1), (a2, b2)| {
-        if a1 > a2 {
-            (a1, b1)
-        } else if a1 < a2 {
-            (a2, b2)
-        } else {
-            if b1 < b2 {
-                (a1, b1)
-            } else {
-                (a2, b2)
-            }
-        }
-    };
-    let g = |(a, b), (c, _)| (a + c, b);
-    let mut st = SegmentTree::new(n, v, f, g, (usize::MIN, usize::MAX));
-
-    for i in 0..m {
-        st.update(a[i], (1, 0));
-        let (_, val) = st.query(0, n);
-        pr(val+1);
+    let mut v = vec![HashSet::new();n];
+    let mut sz = vec![1; n];
+    for i in 0..n {
+        v[i].insert(c[i]);
     }
 
-}
-
-pub struct SegmentTree<T, F, G>
-where
-    T: Clone + Copy + std::fmt::Debug,
-    F: Fn(T, T) -> T,
-    G: Fn(T, T) -> T,
-{
-    n: usize,
-    v: Vec<T>,
-    f: F,
-    g: G,
-    zero: T,
-}
-
-impl<T, F, G> SegmentTree<T, F, G>
-where
-    T: Clone + Copy + std::fmt::Debug,
-    F: Fn(T, T) -> T,
-    G: Fn(T, T) -> T,
-{
-    pub fn new(n: usize, v: Vec<T>, f: F, g: G, zero: T) -> Self {
-        let mut n_ = 1;
-        while n_ < n {
-            n_ *= 2;
+    for (a, b) in queries {
+        if sz[a] > sz[b] {
+            // idx[a], idx[b] を swap した上で、 このあとidx[a] を idx[b] にうつす
+            let tmp = idx[b];
+            idx[b] = idx[a];
+            idx[a] = tmp;
         }
 
-        let mut v_ = vec![zero; 2 * n_];
-        for i in 0..n {
-            v_[n_ + i] = v[i];
-        }
-        for i in (0..=n_ - 1).rev() {
-            v_[i] = f(v_[i * 2], v_[i * 2 + 1]);
-        }
 
-        SegmentTree {
-            n: n_,
-            v: v_,
-            f,
-            g,
-            zero,
+        // idx[a] から idx[b] へ
+        let ia = idx[a];
+        let ib = idx[b];
+        //assert!(sz[ia] <= sz[ib]);
+        sz[ib] = sz[ia] + sz[ib];
+        sz[ia] = 0;
+
+        for elm in v[ia].clone() {
+            v[ib].insert(elm);
         }
+        v[ia] = HashSet::new();
+        pr(v[ib].len());
     }
 
-    pub fn update(&mut self, i: usize, x: T) {
-        self.v[self.n + i] = (self.g)(self.v[self.n + i], x);
-        let mut now = (self.n + i) / 2;
-        while now > 0 {
-            self.v[now] = (self.f)(self.v[now * 2], self.v[now * 2 + 1]);
-            now /= 2;
-        }
-    }
-
-    fn query_(&self, l: usize, r: usize, k: usize, a: usize, b: usize) -> T {
-        if r <= a || b <= l {
-            return self.zero;
-        }
-        if a <= l && r <= b {
-            return self.v[k];
-        }
-
-        let val1 = self.query_(l, (l + r) / 2, 2 * k, a, b);
-        let val2 = self.query_((l + r) / 2, r, 2 * k + 1, a, b);
-        (self.f)(val1, val2)
-    }
-
-    pub fn query(&self, a: usize, b: usize) -> T {
-        self.query_(0, self.n, 1, a, b)
-    }
 }
 
 #[allow(unused_imports)]
