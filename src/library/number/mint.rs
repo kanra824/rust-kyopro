@@ -1,7 +1,7 @@
 use std::{fmt, ops};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct Modint<const MOD: i64> {
+pub struct Modint<const MOD: i64> {
     x: i64,
 }
 
@@ -12,15 +12,15 @@ impl<const MOD: i64> std::fmt::Display for Modint<MOD> {
 }
 
 impl<const MOD: i64> Modint<MOD> {
-    fn zero() -> Self {
+    pub fn zero() -> Self {
         Modint { x: 0 }
     }
 
-    fn new(x: i64) -> Self {
-        Modint { x }
+    pub fn new(x: i64) -> Self {
+        Modint { x : x % MOD }
     }
 
-    fn pow(&self, mut k: i64) -> Self {
+    pub fn pow(&self, mut k: i64) -> Self {
         let mut mul = Modint::new(self.x);
         let mut res = Modint::new(1);
         while k > 0 {
@@ -33,7 +33,7 @@ impl<const MOD: i64> Modint<MOD> {
         res
     }
 
-    fn inv(&self) -> Self {
+    pub fn inv(&self) -> Self {
         if self.x == 0 {
             panic!("0 has no inv");
         }

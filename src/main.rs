@@ -3,44 +3,7 @@ fn main() {
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
         // from &mut source,
-        n: usize,
-        q: usize,
-        c: [Usize1; n],
-        queries: [(Usize1, Usize1); q],
     }
-    let mut idx = vec![0; n];
-    for i in 0..n {
-        idx[i] = i;
-    }
-    let mut v = vec![HashSet::new();n];
-    let mut sz = vec![1; n];
-    for i in 0..n {
-        v[i].insert(c[i]);
-    }
-
-    for (a, b) in queries {
-        if sz[a] > sz[b] {
-            // idx[a], idx[b] を swap した上で、 このあとidx[a] を idx[b] にうつす
-            let tmp = idx[b];
-            idx[b] = idx[a];
-            idx[a] = tmp;
-        }
-
-
-        // idx[a] から idx[b] へ
-        let ia = idx[a];
-        let ib = idx[b];
-        //assert!(sz[ia] <= sz[ib]);
-        sz[ib] = sz[ia] + sz[ib];
-        sz[ia] = 0;
-
-        for elm in v[ia].clone() {
-            v[ib].insert(elm);
-        }
-        v[ia] = HashSet::new();
-        pr(v[ib].len());
-    }
-
 }
 
 #[allow(unused_imports)]
@@ -53,6 +16,8 @@ use std::cmp::{max, min};
 use std::collections::*;
 #[allow(unused_imports)]
 use std::io::{stdin, stdout, BufReader, Write};
+#[allow(unused_imports)]
+use std::str::FromStr;
 
 #[allow(unused)]
 const MOD998: i64 = 998244353;
@@ -73,4 +38,28 @@ where
     T: std::fmt::Debug,
 {
     println!("{:?}", val);
+}
+
+
+fn input<T: FromStr>() -> T {
+    let mut buffer = String::new();
+    stdin().read_line(&mut buffer).unwrap();
+    buffer.trim().parse().ok().unwrap()
+}
+
+fn input_vec<T: FromStr>() -> Vec<T> {
+    let mut buffer = String::new();
+    stdin().read_line(&mut buffer).unwrap();
+    let v = buffer.trim().split_whitespace().map(|e| e.parse().ok().unwrap()).collect();
+    v
+}
+
+// 複数の型が入り得る場合を処理したい（どうやって？）
+
+fn input_lines<T: FromStr>(n: usize) -> Vec<T> {
+    let mut v: Vec<T> = Vec::new();
+    for i in 0..n {
+        v.push(input());
+    }
+    v
 }

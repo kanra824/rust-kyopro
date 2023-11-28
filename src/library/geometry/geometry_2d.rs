@@ -198,11 +198,11 @@ impl Circle {
 
         if intersection == 2 {
             vec![
-                self.p + Complex64::from_polar(&self.r, &(t + a)),
-                self.p + Complex64::from_polar(&self.r, &(t - a)),
+                self.p + Complex64::from_polar(self.r, t + a),
+                self.p + Complex64::from_polar(self.r, t - a),
             ]
         } else {
-            vec![self.p + Complex64::from_polar(&self.r, &t)]
+            vec![self.p + Complex64::from_polar(self.r, t)]
         }
     }
 

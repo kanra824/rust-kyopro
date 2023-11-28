@@ -26,7 +26,7 @@ impl UnionFind {
         }
     }
 
-    pub fn get_sz(&self, x: usize) -> usize {
+    pub fn get_sz(&mut self, x: usize) -> usize {
         let x = self.root(x);
         self.sz[x]
     }
