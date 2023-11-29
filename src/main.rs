@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 fn main() {
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
@@ -6,25 +8,19 @@ fn main() {
     }
 }
 
-#[allow(unused_imports)]
 use proconio::marker::{Chars, Isize1, Usize1};
-#[allow(unused_imports)]
 use proconio::{input, source::line::LineSource};
-#[allow(unused_imports)]
 use std::cmp::{max, min};
-#[allow(unused_imports)]
 use std::collections::*;
-#[allow(unused_imports)]
 use std::io::{stdin, stdout, BufReader, Write};
-#[allow(unused_imports)]
 use std::str::FromStr;
 
-#[allow(unused)]
+/// 有名MODその1
 const MOD998: i64 = 998244353;
-#[allow(unused)]
+/// 有名MODその2
 const MOD107: i64 = 1000000007;
 
-#[allow(unused)]
+/// 単一の値をプリントするための関数
 fn pr<T>(val: T)
 where
     T: std::fmt::Display,
@@ -32,7 +28,7 @@ where
     println!("{}", val);
 }
 
-#[allow(unused)]
+/// 単一の値をデバッグプリントするための関数
 fn pd<T>(val: T)
 where
     T: std::fmt::Debug,
@@ -40,13 +36,14 @@ where
     println!("{:?}", val);
 }
 
-
+/// 単一の値を入力する
 fn input<T: FromStr>() -> T {
     let mut buffer = String::new();
     stdin().read_line(&mut buffer).unwrap();
     buffer.trim().parse().ok().unwrap()
 }
 
+/// 一行の複数の値を入力する
 fn input_vec<T: FromStr>() -> Vec<T> {
     let mut buffer = String::new();
     stdin().read_line(&mut buffer).unwrap();
@@ -54,8 +51,8 @@ fn input_vec<T: FromStr>() -> Vec<T> {
     v
 }
 
-// 複数の型が入り得る場合を処理したい（どうやって？）
-
+// TODO: 複数の型が入り得る場合を処理したい（どうやって？）
+/// 複数行を入力する
 fn input_lines<T: FromStr>(n: usize) -> Vec<T> {
     let mut v: Vec<T> = Vec::new();
     for i in 0..n {
