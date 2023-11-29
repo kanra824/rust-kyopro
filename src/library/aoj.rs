@@ -130,6 +130,7 @@ async fn test_get_testcase_and_savefile() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_get_all_testcases_and_savefile() -> anyhow::Result<()> {
     let id = 2439;
     get_all_testcase_and_savefile(id).await?;
