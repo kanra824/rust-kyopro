@@ -1,11 +1,7 @@
 pub struct SegmentTree<T, F, G>
-where
-    T: Clone + Copy,
-    F: Fn(T, T) -> T,
-    G: Fn(T, T) -> T,
 {
     n: usize,
-    v: Vec<T>,
+    pub v: Vec<T>,
     f: F,
     g: G,
     zero: T,
