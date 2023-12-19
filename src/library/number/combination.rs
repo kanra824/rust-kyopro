@@ -1,12 +1,14 @@
 use super::mint::Modint;
 
-pub struct Combination<const MOD: i64> {
+type ModintMod = i64;
+
+pub struct Combination<const MOD: ModintMod> {
     n: usize,
     fact: Vec<Modint<MOD>>,
     rfact: Vec<Modint<MOD>>,
 }
 
-impl<const MOD: i64> Combination<MOD> {
+impl<const MOD: ModintMod> Combination<MOD> {
     pub fn new() -> Self {
         Combination::<MOD> {
             n: 1,
@@ -72,6 +74,6 @@ mod tests {
     #[test]
     fn test_C() {
         let mut comb = super::Combination::<MOD998>::new();
-        assert_eq!(comb.C(50, 10), Mint::new(10272278170));
+        assert_eq!(comb.C(50, 10), Mint::new(10272278170i64 % MOD998));
     }
 }
