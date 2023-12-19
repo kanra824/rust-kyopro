@@ -4,12 +4,8 @@ use anyhow::Result;
 use std::io::Write;
 
 /// [command] [args]... < in.txt > out.txt
-pub fn exec(num: usize, command: String, args: Option<Vec<String>>) -> Result<ExitStatus> {
+pub fn exec(num: usize, command: String, args: Option<Vec<String>>, contest_dir: &Path, solver_dir: &str) -> Result<ExitStatus> {
     // set dir
-    let current_dir = env::current_dir()?;
-    let contest_dir = env::var("CONTEST_DIR")?;
-    let contest_dir = current_dir.join(&contest_dir);
-    let solver_dir = current_dir.parent().unwrap().to_str().unwrap();
 
     // set input / output path
     let in_path = contest_dir.join(format!("in/{:>04}.txt", num));

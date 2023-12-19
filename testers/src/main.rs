@@ -28,7 +28,13 @@ fn main() {
     let status = match &cli.command {
         Commands::Build => build(),
         Commands::Gen => gen(),
-        Commands::Exec(e) => exec(e.num, e.command.clone(), e.args.clone()),
+        Commands::Exec(e) => {
+            let current_dir = env::current_dir()?;
+            let contest_dir = env::var("CONTEST_DIR")?;
+            let contest_dir = current_dir.join(&contest_dir);
+            let solver_dir = current_dir.parent().unwrap().to_str().unwrap();
+            //exec(e.num, e.command.clone(), e.args.clone());
+        },
     };
 
     match status {
