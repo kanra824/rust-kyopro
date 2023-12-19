@@ -176,8 +176,45 @@ impl<const MOD: ModintMod> ops::DivAssign<ModintMod> for Modint<MOD> {
 }
 
 #[cfg(test)]
-mod tests{
-    type Mint = super::Modint<998244353>;
+mod test_modint {
+    const MOD998: ModintMod = 998244353;
+    type Mint = super::Modint<MOD998>;
+
+    use rand::{self, Rng};
+
+    use super::ModintMod;
+
+    #[test]
+    fn test_zero() {
+        let m = Mint::zero();
+        assert_eq!(m, Mint { x: 0 });
+    }
+
+    #[test]
+    fn test_pow() {
+        let mut rng = rand::thread_rng();
+        for i in 0..100 {
+            let x = rng.gen_range(0..1000000000i64);
+            let mut mul = 1;
+            for j in 0..100 {
+                mul = mul * x % MOD998;
+            }
+        }
+    }
+
+    #[test]
+    fn test_inv() {
+        let m = Mint { x: 100 };
+        let inv = m.inv();
+        assert_eq!(inv, Mint { x: 828542813 });
+    }
+
+    #[test]
+    #[should_panic(expected = "0 has no inv")]
+    fn test_inv_panic() {
+        let m = Mint { x: 0 };
+        let _ = m.inv();
+    }
 
     #[test]
     fn test_neg() {
@@ -188,6 +225,7 @@ mod tests{
         let m3 = Mint { x: 0 };
         assert_eq!(-m3, Mint { x: 0 });
     }
+
 
     #[test]
     fn test_add() {
@@ -227,6 +265,14 @@ mod tests{
 
         assert_eq!(m1 / m2, Mint { x: 725995894 });
         assert_eq!(m1 / m3, Mint { x: 998244352 });
+    }
+
+    #[test]
+    #[should_panic(expected = "0 division is occured")]
+    fn test_div_panic() {
+        let m1 = Mint { x: 100 };
+        let m2 = Mint { x: 0 };
+        let _ = m1 / m2;
     }
 
     #[test]
