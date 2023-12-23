@@ -1,8 +1,7 @@
 //use proconio::input;
 //use proconio::marker::{Usize1, Isize1};
-
 pub struct UnionFind {
-    _n: usize,
+    n: usize,
     par: Vec<usize>,
     sz: Vec<usize>,
 }
@@ -14,7 +13,7 @@ impl UnionFind {
             par.push(i);
         }
         let sz = vec![1; n];
-        UnionFind { _n: n, par, sz }
+        UnionFind { n: n, par, sz }
     }
 
     pub fn root(&mut self, x: usize) -> usize {
@@ -30,6 +29,14 @@ impl UnionFind {
         let x = self.root(x);
         self.sz[x]
     }
+
+     pub fn count(&mut self) -> usize {
+         let mut st = std::collections::HashSet::new(); 
+         for i in 0..self.n {
+            st.insert(self.root(i));
+         }
+         st.len()
+     }
 
     pub fn unite(&mut self, x: usize, y: usize) {
         let mut x = self.root(x);
@@ -51,24 +58,3 @@ impl UnionFind {
         self.root(x) == self.root(y)
     }
 }
-
-// fn main() {
-//     input! {
-//         n: usize,
-//         q: usize,
-//         query: [(i32, usize, usize); q],
-//     }
-//
-//     let mut uf = UnionFind::new(n);
-//     for (com, x, y) in query {
-//         if com == 0 {
-//             uf.unite(x, y);
-//         } else {
-//             if uf.same(x, y) {
-//                 println!("Yes");
-//             } else {
-//                 println!("No");
-//             }
-//         }
-//     }
-// }
