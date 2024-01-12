@@ -2,8 +2,7 @@
 
 fn main() {
     let mut str = String::new();
-    let mut r = Reader::new(&mut str, stdin());
-
+    let mut reader = Reader::new(&mut str, stdin());
 }
 
 use std::cmp::{max, min};
@@ -114,4 +113,16 @@ impl<'a> Reader<'a> {
         }
         res
     }
+}
+
+// dir の方向にすすむ
+fn next_pos(w: usize, h: usize, now: (usize, usize), dir: (i64, i64)) -> Option<(usize, usize)> {
+    let nr = now.0 as i64 + dir.0;
+    let nc = now.1 as i64 + dir.1;
+    if !(0 <= nr && nr < h as i64 && 0 <= nc && nc < w as i64) {
+        return None;
+    }
+    let nr = nr as usize;
+    let nc = nc as usize;
+    Some((nr, nc))
 }
