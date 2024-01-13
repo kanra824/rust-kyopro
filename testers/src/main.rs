@@ -1,6 +1,7 @@
 use clap::{Args, Parser, Subcommand};
+use anyhow::Result;
 mod commands;
-use commands::{build::build, exec::exec, gen::gen};
+use commands::{build::build, exec::{exec, exec_all}, gen::gen, tester::{tester, tester_all}, vis::vis};
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
@@ -13,28 +14,45 @@ enum Commands {
     Build,
     Gen,
     Exec(Exec),
+    Vis(Vis),
+    Tester(Tester),
+
+    // expansion
+    ExecAll,
+    TesterAll,
+    //VisAll,
+    // Run(Run),
+    // RunAll,
 }
 
 #[derive(Args)]
 struct Exec {
     num: usize,
-    command: String,
-    args: Option<Vec<String>>,
 }
 
-fn main() {
+#[derive(Args)]
+struct Vis {
+    num: usize,
+}
+
+#[derive(Args)]
+struct Tester {
+    num: usize,
+}
+
+fn main() -> Result<()> {
     let cli = Cli::parse();
+    let contest_dir = std::env::var("CONTEST_DIR")?;
+    let solver_path = std::env::var("SOLVER")?;
 
     let status = match &cli.command {
         Commands::Build => build(),
         Commands::Gen => gen(),
-        Commands::Exec(e) => {
-            let current_dir = env::current_dir()?;
-            let contest_dir = env::var("CONTEST_DIR")?;
-            let contest_dir = current_dir.join(&contest_dir);
-            let solver_dir = current_dir.parent().unwrap().to_str().unwrap();
-            //exec(e.num, e.command.clone(), e.args.clone());
-        },
+        Commands::Exec(e) => exec(e.num, &contest_dir, &solver_path),
+        Commands::Vis(e) => vis(e.num),
+        Commands::Tester(e) => tester(e.num, &contest_dir, &solver_path),
+        Commands::TesterAll => tester_all(8, contest_dir, solver_path),
+        Commands::ExecAll => exec_all(8, contest_dir, solver_path),
     };
 
     match status {

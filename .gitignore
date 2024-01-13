@@ -1,4 +1,3 @@
 target/
 .vscode/
 src/tester
-src/main.rs

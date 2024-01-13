@@ -1,35 +1,53 @@
-use std::env;
-use std::process::{Command, ExitStatus, Stdio};
 use anyhow::Result;
-use std::io::Write;
+use std::fs::File;
+use std::os::unix::io::{AsRawFd, FromRawFd};
+use std::process::{Command, ExitStatus, Stdio};
+use std::sync::Arc;
+use std::thread;
 
-/// [command] [args]... < in.txt > out.txt
-pub fn exec(num: usize, command: String, args: Option<Vec<String>>, contest_dir: &Path, solver_dir: &str) -> Result<ExitStatus> {
-    // set dir
+/// [command] < in.txt > out.txt
+pub fn exec(num: usize, contest_dir: &str, solver_path: &str) -> Result<ExitStatus> {
+    let num = format!("{:0>4}", num);
 
-    // set input / output path
-    let in_path = contest_dir.join(format!("in/{:>04}.txt", num));
-    let out_path = contest_dir.join(format!("out/{:>04}.txt", num));
-    let _ = std::fs::create_dir(&contest_dir.join("out"));
+    let input = File::open(format!("{}/in/{}.txt", contest_dir, num)).unwrap();
+    let input = unsafe { Stdio::from_raw_fd(input.as_raw_fd()) };
 
-    let args = args.unwrap_or_else(|| vec![]);
-    let mut p = Command::new(command)
-        .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .current_dir(solver_dir)
-        .spawn()?;
-    let mut stdin = std::io::BufWriter::new(p.stdin.take().unwrap());
-    let mut stdout = std::io::BufReader::new(p.stdout.take().unwrap());
+    std::fs::create_dir_all(contest_dir.to_string() + "/out")?;
+    let output = File::create(format!("{}/out/{}.txt", contest_dir, num)).unwrap();
+    let output = unsafe { Stdio::from_raw_fd(output.as_raw_fd()) };
 
-    let input = std::fs::read_to_string(&in_path)?;
-    writeln!(stdin, "{}", input)?;
-    let _ = stdin.flush();
-
-    // print p's stdout to output file
-    let mut output_file = std::fs::File::create(&out_path)?;
-    std::io::copy(&mut stdout, &mut output_file)?;
-
-    let status = p.wait()?;
+    let status = Command::new(solver_path)
+        .stdin(input)
+        .stdout(output)
+        .current_dir(contest_dir)
+        .status()?;
     Ok(status)
+}
+
+pub fn exec_all(j: usize, contest_dir: String, solver_path: String) -> Result<ExitStatus> {
+    let n = std::fs::read_dir(contest_dir.to_string() + "/in")?.count();
+    let mut res = Err(anyhow::anyhow!("n must be larger than 0"));
+    let cd = Arc::new(contest_dir);
+    let sp = Arc::new(solver_path);
+
+    let mut num = 0;
+    while num < n {
+        let mut handler = vec![];
+        for _ in 0..j {
+            if num >= n {
+                break;
+            }
+            println!("{}", num);
+            let cd_i = cd.clone();
+            let sp_i = sp.clone();
+            handler.push(thread::spawn(move || {
+                exec(num.clone(), cd_i.as_str(), sp_i.as_str())
+            }));
+            num += 1;
+        }
+        for h in handler {
+            res = h.join().unwrap();
+        }
+    }
+    res
 }
