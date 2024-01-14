@@ -61,6 +61,62 @@ fn input_lines<T: FromStr>(n: usize) -> Vec<T> {
     v
 }
 
+
+struct Reader<'a> {
+    stdin: Stdin,
+    tokens: Vec<VecDeque<&'a str>>,
+    idx: usize,
+}
+
+impl<'a> Reader<'a> {
+    fn new(str: &'a mut String, mut stdin: Stdin) -> Self {
+        stdin.read_to_string(str).unwrap();
+        let tokens: Vec<VecDeque<&str>> = str
+            .trim()
+            .split('\n')
+            .map(|v| v.split_whitespace().collect())
+            .collect();
+        Reader {
+            stdin,
+            tokens,
+            idx: 0,
+        }
+    }
+
+    fn r<T: FromStr>(&mut self) -> T {
+        let str = self.tokens[self.idx].pop_front().unwrap();
+        let res = str.parse().ok().unwrap();
+        if self.tokens[self.idx].is_empty() {
+            self.idx += 1;
+        }
+        res
+    }
+
+    fn rv<T: FromStr>(&mut self) -> Vec<T> {
+        let deque = &mut self.tokens[self.idx];
+        let mut res = vec![];
+        while !deque.is_empty() {
+            let str = deque.pop_front().unwrap();
+            res.push(str.parse().ok().unwrap());
+        }
+        self.idx += 1;
+        res
+    }
+
+    fn rl<T: FromStr>(&mut self, n: usize) -> Vec<T> {
+        let mut res = vec![];
+        let len = self.tokens.len();
+        assert!(self.idx + n <= len);
+        for i in 0..n {
+            let str = self.tokens[self.idx].pop_front().unwrap();
+            res.push(str.parse().ok().unwrap());
+            assert!(self.tokens[self.idx].is_empty());
+            self.idx += 1;
+        }
+        res
+    }
+}
+
 // dir の方向にすすむ
 fn next_pos(w: usize, h: usize, now: (usize, usize), dir: (i64, i64)) -> Option<(usize, usize)> {
     let nr = now.0 as i64 + dir.0;

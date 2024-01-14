@@ -63,22 +63,6 @@ where
     }
 }
 
-fn input<T: std::str::FromStr>() -> T {
-    let mut buffer = String::new();
-    std::io::stdin().read_line(&mut buffer).unwrap();
-    buffer.trim().parse().ok().unwrap()
-}
-
-fn input_vec<T: std::str::FromStr>() -> Vec<T> {
-    let mut buffer = String::new();
-    std::io::stdin().read_line(&mut buffer).unwrap();
-    let v = buffer
-        .trim()
-        .split_whitespace()
-        .map(|e| e.parse().ok().unwrap())
-        .collect();
-    v
-}
 
 // #[test]
 // fn main() {
