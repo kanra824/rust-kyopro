@@ -1,5 +1,4 @@
 use std::{fmt, ops};
-
 type ModintMod = i64;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

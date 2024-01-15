@@ -40,6 +40,7 @@ impl<const MOD: ModintMod> Combination<MOD> {
         self.rfact[k]
     }
 
+    #[allow(non_snake_case)]
     pub fn P(&mut self, n: usize, k: usize) -> Modint<MOD> {
         if n < k {
             Modint::zero()
@@ -48,6 +49,7 @@ impl<const MOD: ModintMod> Combination<MOD> {
         }
     }
 
+    #[allow(non_snake_case)]
     pub fn C(&mut self, n: usize, k: usize) -> Modint<MOD> {
         if n < k {
             Modint::zero()
@@ -56,6 +58,7 @@ impl<const MOD: ModintMod> Combination<MOD> {
         }
     }
 
+    #[allow(non_snake_case)]
     pub fn H(&mut self, n: usize, k: usize) -> Modint<MOD> {
         if n == 0 && k == 0 {
             Modint::new(1)
@@ -72,6 +75,7 @@ mod tests {
     const MOD998: i64 = 998244353;
 
     #[test]
+    #[allow(non_snake_case)]
     fn test_C() {
         let mut comb = super::Combination::<MOD998>::new();
         assert_eq!(comb.C(50, 10), Mint::new(10272278170i64 % MOD998));
