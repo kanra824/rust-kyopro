@@ -1,302 +1,168 @@
 #![allow(unused)]
 
-fn itov(mut n: usize, k: usize) -> Vec<usize> {
-    let mut v = vec![];
-    for i in 0..k {
-        v.push(n % 2);
-        n /= 2;
-    }
-    v.reverse();
-    v
-}
-
-fn vtoi(v: &Vec<usize>, l: usize, r: usize) -> usize {
-    let mut res = 0;
-    for i in l..r {
-        res *= 2;
-        res += v[i];
-    }
-    res
-}
+mod library;
 
 fn main() {
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
         // from &mut source,
-        x: [i64; 16],
+        n: usize,
+        m: usize,
+        a: [i64; n],
+        queries: [(Usize1, Usize1, i64); m],
     }
 
-    let n = 8;
-    let mut g = vec![vec![]; n];
-    let mut din = vec![0; n];
-    let mut dout = vec![0; n];
+    let mut data = vec![];
     for i in 0..n {
-        let mut iv = itov(i, 3);
-        // i, 0
-        iv.push(0);
-        let res = vtoi(&iv, 0, 4);
-        let val = x[res];
-        println!("res: {:04b}, val: {}", res, val);
-        let to = vtoi(&iv, 1, 4);
-        for j in 0..val {
-            if j == 0 {
-                println!("{:03b} -> {:03b}", i, to);
-            }
-            din[to] += 1;
-            dout[i] += 1;
-            g[i].push(to);
-        }
-
-        // i, 1
-        iv.pop();
-        iv.push(1);
-        let res = vtoi(&iv, 0, 4);
-        let val = x[res];
-        println!("res: {:04b}, val: {}", res, val);
-        let to = vtoi(&iv, 1, 4);
-        for j in 0..val {
-            if j == 0 {
-                println!("{:03b} -> {:03b}", i, to);
-            }
-            g[i].push(to);
-        }
+        data.push(Mint::new(a[i]));
     }
 
-    let mut uf = UnionFind::new(n);
+    let zero = Mint::zero();
+    let one = Mint::new(1);
+    let mut st = LazySegmentTree::new(
+        n,
+        |a, b| a + b,
+        |a, b, len| {b.0 * a + b.1},
+        |a, b| (a.0 * b.0, b.0 * a.1 + b.1),
+        zero,
+        (one, zero),
+    );
+    st.build(&data);
+
+    for (l, r, x) in queries {
+        let p = Mint::new((r + 1 - l) as i64).inv();
+        st.update(l, r + 1, (one - p, p * Mint::new(x)));
+    }
+
     for i in 0..n {
-        for &to in g[i].iter() {
-            uf.unite(i, to);
-        }
+        pr(st.query(i, i+1));
     }
-    if uf.count() != 1 {
-        println!("0");
-        return;
-    }
-
-    let mut ok = true;
-    for i in 0..n {
-        ok = ok && (din[i] == dout[i]);
-    }
-    if !ok {
-        println!("0");
-        return;
-    }
-
-    // オイラーグラフをチェック済み
-    // BEST theorem: 始点、終点を決めると、（始点を根とする有向木の数) * （総積）｛outdeg - 1}
-    
-
 }
 
-//use proconio::input;
-//use proconio::marker::{Usize1, Isize1};
-pub struct UnionFind {
+pub struct LazySegmentTree<T, OT, F, G, H>
+where
+    T: Clone + Copy,
+    OT: Clone + Copy + PartialEq + Eq,
+    F: Fn(T, T) -> T,
+    G: Fn(T, OT, usize) -> T,
+    H: Fn(OT, OT) -> OT,
+{
     n: usize,
-    par: Vec<usize>,
-    sz: Vec<usize>,
+    sz: usize,
+    data: Vec<T>,
+    lazy: Vec<OT>,
+    f: F,
+    g: G,
+    h: H,
+    e: T,
+    oe: OT,
 }
 
-impl UnionFind {
-    pub fn new(n: usize) -> UnionFind {
-        let mut par = Vec::new();
-        for i in 0..n {
-            par.push(i);
+impl<T, OT, F, G, H> LazySegmentTree<T, OT, F, G, H>
+where
+    T: Clone + Copy,
+    OT: Clone + Copy + PartialEq + Eq,
+    F: Fn(T, T) -> T,
+    G: Fn(T, OT, usize) -> T,
+    H: Fn(OT, OT) -> OT,
+{
+    pub fn new(n: usize, f: F, g: G, h: H, e: T, oe: OT) -> Self {
+        let mut sz = 1;
+        while sz < n {
+            sz *= 2;
         }
-        let sz = vec![1; n];
-        UnionFind { n: n, par, sz }
-    }
 
-    pub fn root(&mut self, x: usize) -> usize {
-        if self.par[x] == x {
-            x
-        } else {
-            self.par[x] = self.root(self.par[x]);
-            self.par[x]
+        LazySegmentTree {
+            n,
+            sz,
+            data: vec![e; 2 * sz],
+            lazy: vec![oe; 2 * sz],
+            f,
+            g,
+            h,
+            e,
+            oe,
         }
     }
 
-    pub fn get_sz(&mut self, x: usize) -> usize {
-        let x = self.root(x);
-        self.sz[x]
+    // 初期化する. O(n)
+    // v: 初期値の配列
+    // 使用例
+    // let v = vec![1, 2, 3, 4, 5];
+    // st.build(&v)
+    pub fn build(&mut self, v: &Vec<T>) {
+        assert!(v.len() == self.n);
+        for i in 0..self.n {
+            self.data[self.sz + i] = v[i];
+        }
+        for i in (1..self.sz).rev() {
+            self.data[i] = (self.f)(self.data[i * 2], self.data[i * 2 + 1]);
+        }
     }
 
-     pub fn count(&mut self) -> usize {
-         let mut st = std::collections::HashSet::new(); 
-         for i in 0..self.n {
-            st.insert(self.root(i));
-         }
-         st.len()
-     }
+    // 指定した区間に作用素 x を作用させる O(log n)
+    // a, b: [a, b) に x を作用させる
+    // x: 作用素モノイドの元
+    // 使い方 (区間[a, b) を x に変更)
+    // st.update(a, b, x);
+    pub fn update(&mut self, a: usize, b: usize, x: OT) {
+        self.update_range(a, b, x, 1, 0, self.sz);
+    }
 
-    pub fn unite(&mut self, x: usize, y: usize) {
-        let mut x = self.root(x);
-        let mut y = self.root(y);
-        if x == y {
+    // 指定した区間に取得クエリを実行する O(log n)
+    // a, b: [a, b) のクエリを実行する
+    // st.query(a, b)
+    pub fn query(&mut self, a: usize, b: usize) -> T {
+        self.query_range(a, b, 1, 0, self.sz)
+    }
+
+    fn propagate(&mut self, k: usize, len: usize) {
+        if self.lazy[k] == self.oe {
             return;
         }
-
-        if self.sz[x] > self.sz[y] {
-            std::mem::swap(&mut x, &mut y);
+        if k < self.sz {
+            self.lazy[k * 2] = (self.h)(self.lazy[k * 2], self.lazy[k]);
+            self.lazy[k * 2 + 1] = (self.h)(self.lazy[k * 2 + 1], self.lazy[k]);
         }
-
-        self.sz[y] = self.sz[x] + self.sz[y];
-        self.sz[x] = self.sz[y];
-        self.par[x] = y;
+        self.data[k] = (self.g)(self.data[k], self.lazy[k], len);
+        self.lazy[k] = self.oe;
     }
 
-    pub fn same(&mut self, x: usize, y: usize) -> bool {
-        self.root(x) == self.root(y)
+    fn update_range(&mut self, a: usize, b: usize, x: OT, k: usize, l: usize, r: usize) {
+        self.propagate(k, r - l);
+        if r <= a || b <= l {
+            return;
+        } else if a <= l && r <= b {
+            self.lazy[k] = (self.h)(self.lazy[k], x);
+            self.propagate(k, r - l);
+        } else {
+            self.update_range(a, b, x, k * 2, l, (l + r) / 2);
+            self.update_range(a, b, x, k * 2 + 1, (l + r) / 2, r);
+            self.data[k] = (self.f)(self.data[k * 2], self.data[k * 2 + 1]);
+        }
+    }
+
+    fn query_range(&mut self, a: usize, b: usize, k: usize, l: usize, r: usize) -> T {
+        self.propagate(k, r - l);
+        if r <= a || b <= l {
+            return self.e;
+        } else if a <= l && r <= b {
+            return self.data[k];
+        } else {
+            let vl = self.query_range(a, b, k * 2, l, (l + r) / 2);
+            let vr = self.query_range(a, b, k * 2 + 1, (l + r) / 2, r);
+            return (self.f)(vl, vr);
+        }
     }
 }
 
-// 正方行列
-#[derive(Debug, Clone)]
-struct Matrix {
-    h: usize,
-    w: usize,
-    a: Vec<Vec<Mint>>,
-}
-
-impl Matrix {
-    fn new(a: Vec<Vec<Mint>>) -> Self {
-        assert!(!a.is_empty());
-        assert!(a.iter().all(|v| v.len() == a[0].len()));
-        Matrix {
-            h: a.len(),
-            w: a[0].len(),
-            a,
-        }
-    }
-
-    fn zero(h: usize, w: usize) -> Self {
-        Matrix {
-            h,
-            w,
-            a: vec![vec![Mint::zero(); w]; h],
-        }
-    }
-
-    fn e(n: usize) -> Self {
-        let mut a = vec![vec![Mint::zero();n];n];
-        for i in 0..n {
-            a[i][i] = Mint::new(1);
-        }
-        Matrix {
-            h: n,
-            w: n,
-            a,
-        }
-    }
-
-    fn add(&self, b: &Matrix) -> Matrix {
-        debug_assert_eq!(self.h, b.h);
-        debug_assert_eq!(self.w, b.w);
-        let mut res = vec![vec![Mint::zero(); b.w]; self.h];
-        for i in 0..self.h {
-            for j in 0..self.w {
-                res[i][j] = self.a[i][j] + b.a[i][j];
-            }
-        }
-        Matrix {
-            h: res.len(),
-            w: res[0].len(),
-            a: res,
-        }
-    }
-
-    fn mul(&self, b: &Matrix) -> Matrix {
-        debug_assert_eq!(self.w, b.h);
-        let mut res = vec![vec![Mint::zero(); b.w]; self.h];
-        for i in 0..self.h {
-            for j in 0..b.w {
-                for k in 0..self.w {
-                    res[i][j] = res[i][j] + self.a[i][k] * b.a[k][j];
-                }
-            }
-        }
-        Matrix {
-            h: res.len(),
-            w: res[0].len(),
-            a: res,
-        }
-    }
-
-    fn pow(&self, mut k: i64) -> Matrix {
-        assert_eq!(self.h, self.w);
-        let mut res = Matrix::e(self.h);
-        let mut now = self.clone();
-        while k > 0 {
-            if k & 1 == 1 {
-                res = res.mul(&now);
-            }
-            now = now.mul(&now);
-            k >>= 1;
-        }
-        res
-    }
-
-    fn pivot(a: &Matrix, rank: usize, col: usize) -> usize {
-        for i in rank..a.h {
-            if a.a[i][col] != Mint::zero() {
-                return i;
-            }
-        }
-        return usize::MAX;
-    }
-
-    fn sweep(mut a: Matrix, rank: usize, col: usize, pivot: usize) -> Matrix {
-        let tmp = a.a[pivot].clone();
-        a.a[pivot] = a.a[rank].clone();
-        a.a[rank] = tmp;
-        
-        let div = a.a[rank][col].inv();
-        for j in 0..col {
-            assert_eq!(a.a[rank][j], Mint::zero());
-        }
-        for j in col..a.w {
-            a.a[rank][j] *= div;
-        }
-
-        for i in 0..a.h {
-            if i == rank {
-                continue;
-            }
-            for j in 0..col {
-                assert_eq!(a.a[rank][j], Mint::zero());
-            }
-            let tmp = a.a[i][col];
-            for j in col..a.w {
-                let sub = a.a[rank][j] * tmp;
-                a.a[i][j] -= sub;
-            }
-        }
-        a
-    }
-
-    fn determinant(&self) -> Mint {
-        let mut a = self.clone();
-        let mut rank = 0;
-        let mut res = Mint::new(1);
-        for col in 0..self.w {
-            let pivot = Self::pivot(&a, rank, col);
-            if pivot == usize::MAX {
-                return Mint::zero();
-            }
-            res *= a.a[pivot][rank];
-            a = Self::sweep(a, rank, col, pivot);
-            rank += 1;
-        }
-        res
-    }
-
-}
 
 use proconio::marker::{Chars, Isize1, Usize1};
 use proconio::{input, source::line::LineSource};
 use std::cmp::{max, min};
 use std::collections::*;
-use std::io::{stdin, stdout, Read, BufReader, Write, Stdin};
+use std::io::{stdin, stdout, Stdin, BufReader, Read, Write};
 use std::str::FromStr;
 
 /// 有名MODその1

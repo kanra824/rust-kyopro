@@ -1,10 +1,8 @@
-use std::env;
 use std::process::{Command, ExitStatus};
 use anyhow::Result;
 
 
-pub fn build() -> Result<ExitStatus> {
-    let contest_dir = env::var("CONTEST_DIR")?;
+pub fn build(contest_dir: String) -> Result<ExitStatus> {
     let status = Command::new("cargo")
         .arg("build")
         .arg("-r")

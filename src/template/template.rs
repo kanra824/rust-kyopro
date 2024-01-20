@@ -12,7 +12,7 @@ use proconio::marker::{Chars, Isize1, Usize1};
 use proconio::{input, source::line::LineSource};
 use std::cmp::{max, min};
 use std::collections::*;
-use std::io::{stdin, stdout, BufReader, Write};
+use std::io::{stdin, stdout, Stdin, BufReader, Read, Write};
 use std::str::FromStr;
 
 /// 有名MODその1

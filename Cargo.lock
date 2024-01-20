@@ -15,6 +15,7 @@ dependencies = [
  "anyhow",
  "num-complex",
  "num-traits",
+ "permutohedron",
  "proconio",
  "rand",
  "rand_chacha",
@@ -66,6 +67,12 @@ checksum = "39e3200413f237f41ab11ad6d161bc7239c84dcb631773ccd7de3dfe4b5c267c"
 dependencies = [
  "autocfg",
 ]
+
+[[package]]
+name = "permutohedron"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b687ff7b5da449d39e418ad391e5e08da53ec334903ddbb921db208908fc372c"
 
 [[package]]
 name = "ppv-lite86"

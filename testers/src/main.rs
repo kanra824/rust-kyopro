@@ -1,7 +1,15 @@
-use clap::{Args, Parser, Subcommand};
 use anyhow::Result;
+use clap::{Args, Parser, Subcommand};
 mod commands;
-use commands::{build::build, exec::{exec, exec_all}, gen::gen, tester::{tester, tester_all}, vis::vis};
+use commands::{
+    build::build,
+    exec::{exec, exec_all},
+    gen::{gen_seed, gen},
+    tester::{tester, tester_all},
+    vis::vis,
+    score::{score_all, eprint_score},
+    run::{run, run_all},
+};
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
@@ -12,31 +20,24 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Build,
+    GenSeed(Num),
     Gen,
-    Exec(Exec),
-    Vis(Vis),
-    Tester(Tester),
+    Exec(Num),
+    Vis(Num),
+    Tester(Num),
+    Score(Num),
 
     // expansion
     ExecAll,
+    ScoreAll,
     TesterAll,
+    Run(Num),
+    RunAll,
     //VisAll,
-    // Run(Run),
-    // RunAll,
 }
 
 #[derive(Args)]
-struct Exec {
-    num: usize,
-}
-
-#[derive(Args)]
-struct Vis {
-    num: usize,
-}
-
-#[derive(Args)]
-struct Tester {
+struct Num {
     num: usize,
 }
 
@@ -46,13 +47,18 @@ fn main() -> Result<()> {
     let solver_path = std::env::var("SOLVER")?;
 
     let status = match &cli.command {
-        Commands::Build => build(),
-        Commands::Gen => gen(),
+        Commands::Build => build(contest_dir),
+        Commands::GenSeed(e) => gen_seed(contest_dir, e.num),
+        Commands::Gen => gen(contest_dir),
         Commands::Exec(e) => exec(e.num, &contest_dir, &solver_path),
         Commands::Vis(e) => vis(e.num),
         Commands::Tester(e) => tester(e.num, &contest_dir, &solver_path),
-        Commands::TesterAll => tester_all(8, contest_dir, solver_path),
+        Commands::Score(e) => eprint_score(e.num, contest_dir),
         Commands::ExecAll => exec_all(8, contest_dir, solver_path),
+        Commands::ScoreAll => score_all(contest_dir),
+        Commands::TesterAll => tester_all(8, contest_dir, solver_path),
+        Commands::Run(e) => run(e.num, &contest_dir, &solver_path),
+        Commands::RunAll => run_all(8, contest_dir, solver_path),
     };
 
     match status {
