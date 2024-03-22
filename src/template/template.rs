@@ -1,6 +1,12 @@
 #![allow(unused)]
 
 fn main() {
+    // // AOJ
+    // let mut s = String::new();
+    // let stdin = stdin();
+    // let mut reader = Reader::new(&mut s, stdin);
+
+    // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
@@ -114,6 +120,14 @@ impl<'a> Reader<'a> {
             self.idx += 1;
         }
         res
+    }
+
+    fn as_chars(&mut self) -> Vec<char> {
+        let str = self.tokens[self.idx].pop_front().unwrap();
+        if self.tokens[self.idx].is_empty() {
+            self.idx += 1;
+        }
+        str.chars().collect()
     }
 }
 

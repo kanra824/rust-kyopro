@@ -1,168 +1,209 @@
 #![allow(unused)]
 
-mod library;
+#[derive(Clone, Debug)]
+struct Rectangle {
+    r1: usize,
+    c1: usize,
+    r2: usize,
+    c2: usize,
+}
+
+impl Rectangle {
+    fn null() -> Self {
+        Rectangle {
+            r1: usize::MAX,
+            c1: usize::MAX,
+            r2: usize::MAX,
+            c2: usize::MAX,
+        }
+    }
+
+    fn area(&self) -> i64 {
+        ((self.r2 - self.r1) * (self.c2 - self.c1)) as i64
+    }
+}
+
+#[derive(Clone, Debug)]
+struct State {
+    rect: Vec<Vec<Rectangle>>,  // rect[d][n]
+    vcnt: Vec<Vec<Vec<usize>>>, // vcnt[d][w][w-1]
+    hcnt: Vec<Vec<Vec<usize>>>, // hcnt[d][w-1][w]
+    sel: Vec<Vec<Vec<bool>>>,   // sel[d][w][w]
+    cost: i64,
+}
+
+impl State {
+    fn new(w: usize, d: usize, n: usize) -> Self {
+        let mut rect = vec![vec![Rectangle::null(); n]; d];
+        let vcnt = vec![vec![vec![0; w + 1]; w]; d];
+        let hcnt = vec![vec![vec![0; w]; w + 1]; d];
+        let mut sel = vec![vec![vec![false; w]; w]; d];
+        let mut rng = ChaCha20Rng::seed_from_u64(398578937);
+        for i in 0..d {
+            for j in 0..n {
+                let mut r = rng.gen_range(0..w);
+                let mut c = rng.gen_range(0..w);
+                while sel[i][r][c] {
+                    r = rng.gen_range(0..w);
+                    c = rng.gen_range(0..w);
+                }
+                sel[i][r][c] = true;
+                rect[i][j] = Rectangle {
+                    r1: r,
+                    c1: c,
+                    r2: r + 1,
+                    c2: c + 1,
+                };
+            }
+        }
+
+        let mut state = State {
+            rect,
+            vcnt,
+            hcnt,
+            sel,
+            cost: 0,
+        };
+
+        for i in 0..d {
+            state.sort_rect(i);
+        }
+
+        let rect = state.rect.clone();
+        for i in 0..d {
+            for j in 0..n {
+                state.add_rect(i, &rect[i][j]);
+            }
+        }
+
+        state
+    }
+
+    fn sort_rect(&mut self, d: usize) {
+        self.rect[d].sort_by(|rect1, rect2| rect1.area().cmp(&rect2.area()))
+    }
+
+    /// 長方形の追加に応じて vcnt, hcnt を更新する
+    fn add_rect(&mut self, d: usize, rect: &Rectangle) {
+        // ここでスコアの差分更新もしたい...
+
+        for i in rect.r1..rect.r2 {
+            self.vcnt[d][i][rect.c1] += 1;
+            self.vcnt[d][i][rect.c2] += 1;
+        }
+        for j in rect.c1..rect.c2 {
+            self.hcnt[d][rect.r1][j] += 1;
+            self.hcnt[d][rect.r2][j] += 1;
+        }
+    }
+
+    fn calc_cost(&mut self, d: usize, n: usize, w: usize, a: &Vec<Vec<i64>>) -> i64 {
+        let mut cost = 0;
+        // vcnt
+        for i in 0..d - 1 {
+            for j in 0..w {
+                for k in 1..w - 1 {
+                    if self.vcnt[i][j][k] == 0 && self.vcnt[i + 1][j][k] != 0
+                        || self.vcnt[i][j][k] != 0 && self.vcnt[i + 1][j][k] == 0
+                    {
+                        cost += 1;
+                    }
+                }
+            }
+        }
+
+        // hcnt
+        for i in 0..d - 1 {
+            for j in 1..w - 1 {
+                for k in 0..w {
+                    if self.hcnt[i][j][k] == 0 && self.hcnt[i + 1][j][k] != 0
+                        || self.hcnt[i][j][k] != 0 && self.hcnt[i + 1][j][k] == 0
+                    {
+                        cost += 1;
+                    }
+                }
+            }
+        }
+
+        // area
+        for i in 0..d {
+            self.sort_rect(i);
+            for j in 0..n {
+                let area = self.rect[i][j].area();
+                if a[i][j] > area {
+                    cost += (a[i][j] - area) * 100;
+                }
+            }
+        }
+
+        cost
+    }
+}
+
+struct Solver {
+    w: usize,
+    d: usize,
+    n: usize,
+    a: Vec<Vec<i64>>,
+    state: State,
+}
+
+impl Solver {
+    fn new(w: usize, d: usize, n: usize, a: Vec<Vec<i64>>) -> Self {
+        let state = State::new(w, d, n);
+        Solver { w, d, n, a, state }
+    }
+}
 
 fn main() {
+    // // AOJ
+    // let mut s = String::new();
+    // let stdin = stdin();
+    // let mut reader = Reader::new(&mut s, stdin);
+
+    // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
+
+    // 初期化
+    // 開始点はランダム
+    // ランダムに拡大
+    // 小さい順に割当て
+
+    // 更新
+    // 日をランダムに選択
+    // 長方形をランダムに選択
+    // 拡大、縮小、縦横変更
+
     input! {
         // from &mut source,
+        w: usize,
+        d: usize,
         n: usize,
-        m: usize,
-        a: [i64; n],
-        queries: [(Usize1, Usize1, i64); m],
+        a: [[i64; n]; d],
     }
 
-    let mut data = vec![];
-    for i in 0..n {
-        data.push(Mint::new(a[i]));
-    }
+    let mut solver = Solver::new(w, d, n, a.clone());
 
-    let zero = Mint::zero();
-    let one = Mint::new(1);
-    let mut st = LazySegmentTree::new(
-        n,
-        |a, b| a + b,
-        |a, b, len| {b.0 * a + b.1},
-        |a, b| (a.0 * b.0, b.0 * a.1 + b.1),
-        zero,
-        (one, zero),
-    );
-    st.build(&data);
+    let score = solver.state.calc_cost(d, n, w, &a);
 
-    for (l, r, x) in queries {
-        let p = Mint::new((r + 1 - l) as i64).inv();
-        st.update(l, r + 1, (one - p, p * Mint::new(x)));
+    for i in 0..d {
+        for j in 0..n {
+            let rect = solver.state.rect[i][j].clone();
+            println!("{} {} {} {}", rect.r1, rect.c1, rect.r2, rect.c2);
+        }
     }
-
-    for i in 0..n {
-        pr(st.query(i, i+1));
-    }
+    eprintln!("{}", score);
 }
-
-pub struct LazySegmentTree<T, OT, F, G, H>
-where
-    T: Clone + Copy,
-    OT: Clone + Copy + PartialEq + Eq,
-    F: Fn(T, T) -> T,
-    G: Fn(T, OT, usize) -> T,
-    H: Fn(OT, OT) -> OT,
-{
-    n: usize,
-    sz: usize,
-    data: Vec<T>,
-    lazy: Vec<OT>,
-    f: F,
-    g: G,
-    h: H,
-    e: T,
-    oe: OT,
-}
-
-impl<T, OT, F, G, H> LazySegmentTree<T, OT, F, G, H>
-where
-    T: Clone + Copy,
-    OT: Clone + Copy + PartialEq + Eq,
-    F: Fn(T, T) -> T,
-    G: Fn(T, OT, usize) -> T,
-    H: Fn(OT, OT) -> OT,
-{
-    pub fn new(n: usize, f: F, g: G, h: H, e: T, oe: OT) -> Self {
-        let mut sz = 1;
-        while sz < n {
-            sz *= 2;
-        }
-
-        LazySegmentTree {
-            n,
-            sz,
-            data: vec![e; 2 * sz],
-            lazy: vec![oe; 2 * sz],
-            f,
-            g,
-            h,
-            e,
-            oe,
-        }
-    }
-
-    // 初期化する. O(n)
-    // v: 初期値の配列
-    // 使用例
-    // let v = vec![1, 2, 3, 4, 5];
-    // st.build(&v)
-    pub fn build(&mut self, v: &Vec<T>) {
-        assert!(v.len() == self.n);
-        for i in 0..self.n {
-            self.data[self.sz + i] = v[i];
-        }
-        for i in (1..self.sz).rev() {
-            self.data[i] = (self.f)(self.data[i * 2], self.data[i * 2 + 1]);
-        }
-    }
-
-    // 指定した区間に作用素 x を作用させる O(log n)
-    // a, b: [a, b) に x を作用させる
-    // x: 作用素モノイドの元
-    // 使い方 (区間[a, b) を x に変更)
-    // st.update(a, b, x);
-    pub fn update(&mut self, a: usize, b: usize, x: OT) {
-        self.update_range(a, b, x, 1, 0, self.sz);
-    }
-
-    // 指定した区間に取得クエリを実行する O(log n)
-    // a, b: [a, b) のクエリを実行する
-    // st.query(a, b)
-    pub fn query(&mut self, a: usize, b: usize) -> T {
-        self.query_range(a, b, 1, 0, self.sz)
-    }
-
-    fn propagate(&mut self, k: usize, len: usize) {
-        if self.lazy[k] == self.oe {
-            return;
-        }
-        if k < self.sz {
-            self.lazy[k * 2] = (self.h)(self.lazy[k * 2], self.lazy[k]);
-            self.lazy[k * 2 + 1] = (self.h)(self.lazy[k * 2 + 1], self.lazy[k]);
-        }
-        self.data[k] = (self.g)(self.data[k], self.lazy[k], len);
-        self.lazy[k] = self.oe;
-    }
-
-    fn update_range(&mut self, a: usize, b: usize, x: OT, k: usize, l: usize, r: usize) {
-        self.propagate(k, r - l);
-        if r <= a || b <= l {
-            return;
-        } else if a <= l && r <= b {
-            self.lazy[k] = (self.h)(self.lazy[k], x);
-            self.propagate(k, r - l);
-        } else {
-            self.update_range(a, b, x, k * 2, l, (l + r) / 2);
-            self.update_range(a, b, x, k * 2 + 1, (l + r) / 2, r);
-            self.data[k] = (self.f)(self.data[k * 2], self.data[k * 2 + 1]);
-        }
-    }
-
-    fn query_range(&mut self, a: usize, b: usize, k: usize, l: usize, r: usize) -> T {
-        self.propagate(k, r - l);
-        if r <= a || b <= l {
-            return self.e;
-        } else if a <= l && r <= b {
-            return self.data[k];
-        } else {
-            let vl = self.query_range(a, b, k * 2, l, (l + r) / 2);
-            let vr = self.query_range(a, b, k * 2 + 1, (l + r) / 2, r);
-            return (self.f)(vl, vr);
-        }
-    }
-}
-
 
 use proconio::marker::{Chars, Isize1, Usize1};
 use proconio::{input, source::line::LineSource};
+use rand::Rng;
+use rand::SeedableRng;
+use rand_chacha::ChaCha20Rng;
 use std::cmp::{max, min};
 use std::collections::*;
-use std::io::{stdin, stdout, Stdin, BufReader, Read, Write};
+use std::io::{stdin, stdout, BufReader, Read, Stdin, Write};
 use std::str::FromStr;
 
 /// 有名MODその1
@@ -197,7 +238,11 @@ fn input<T: FromStr>() -> T {
 fn input_vec<T: FromStr>() -> Vec<T> {
     let mut buffer = String::new();
     stdin().read_line(&mut buffer).unwrap();
-    let v = buffer.trim().split_whitespace().map(|e| e.parse().ok().unwrap()).collect();
+    let v = buffer
+        .trim()
+        .split_whitespace()
+        .map(|e| e.parse().ok().unwrap())
+        .collect();
     v
 }
 
@@ -210,7 +255,6 @@ fn input_lines<T: FromStr>(n: usize) -> Vec<T> {
     }
     v
 }
-
 
 struct Reader<'a> {
     stdin: Stdin,
@@ -265,6 +309,14 @@ impl<'a> Reader<'a> {
         }
         res
     }
+
+    fn as_chars(&mut self) -> Vec<char> {
+        let str = self.tokens[self.idx].pop_front().unwrap();
+        if self.tokens[self.idx].is_empty() {
+            self.idx += 1;
+        }
+        str.chars().collect()
+    }
 }
 
 // dir の方向にすすむ
@@ -301,7 +353,9 @@ impl<const MOD: ModintMod> Modint<MOD> {
     }
 
     pub fn new(x: ModintMod) -> Self {
-        Modint { x : (x % MOD) as ModintMod }
+        Modint {
+            x: (x % MOD) as ModintMod,
+        }
     }
 
     pub fn pow(&self, mut k: i64) -> Self {

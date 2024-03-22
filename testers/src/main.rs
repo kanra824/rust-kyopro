@@ -6,7 +6,7 @@ use commands::{
     exec::{exec, exec_all},
     gen::{gen_seed, gen},
     tester::{tester, tester_all},
-    vis::vis,
+    vis::{vis, vis_all},
     score::{score_all, eprint_score},
     run::{run, run_all},
 };
@@ -29,6 +29,7 @@ enum Commands {
 
     // expansion
     ExecAll,
+    VisAll,
     ScoreAll,
     TesterAll,
     Run(Num),
@@ -52,9 +53,10 @@ fn main() -> Result<()> {
         Commands::Gen => gen(contest_dir),
         Commands::Exec(e) => exec(e.num, &contest_dir, &solver_path),
         Commands::Vis(e) => vis(e.num),
+        Commands::VisAll => vis_all(contest_dir),
         Commands::Tester(e) => tester(e.num, &contest_dir, &solver_path),
         Commands::Score(e) => eprint_score(e.num, contest_dir),
-        Commands::ExecAll => exec_all(8, contest_dir, solver_path),
+        Commands::ExecAll => exec_all(1, contest_dir, solver_path),
         Commands::ScoreAll => score_all(contest_dir),
         Commands::TesterAll => tester_all(8, contest_dir, solver_path),
         Commands::Run(e) => run(e.num, &contest_dir, &solver_path),
