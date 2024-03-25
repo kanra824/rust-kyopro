@@ -38,13 +38,13 @@ struct State {
 }
 
 impl State {
-    fn new(w: usize, d: usize, n: usize, rng: &mut ChaCha20Rng) -> Self {
-        let mut rect = vec![vec![Rectangle::null(); n]; d];
-        let vcnt = vec![vec![vec![0; w + 1]; w]; d];
-        let hcnt = vec![vec![vec![0; w]; w + 1]; d];
-        let mut sel = vec![vec![vec![false; w]; w]; d];
-        for i in 0..d {
-            for j in 0..n {
+    fn new(w: usize, d_sz: usize, n_sz: usize, rng: &mut ChaCha20Rng) -> Self {
+        let mut rect = vec![vec![Rectangle::null(); n_sz]; d_sz];
+        let vcnt = vec![vec![vec![0; w + 1]; w]; d_sz];
+        let hcnt = vec![vec![vec![0; w]; w + 1]; d_sz];
+        let mut sel = vec![vec![vec![false; w]; w]; d_sz];
+        for i in 0..d_sz {
+            for j in 0..n_sz {
                 let mut r = rng.gen_range(0..w);
                 let mut c = rng.gen_range(0..w);
                 while sel[i][r][c] {
@@ -70,13 +70,13 @@ impl State {
             cost: 0,
         };
 
-        for i in 0..d {
+        for i in 0..d_sz {
             state.sort_rect(i);
         }
 
         let rect = state.rect.clone();
-        for i in 0..d {
-            for j in 0..n {
+        for i in 0..d_sz {
+            for j in 0..n_sz {
                 state.add_rect(i, &rect[i][j]);
             }
         }
@@ -316,10 +316,10 @@ impl State {
         }
     }
 
-    fn calc_area_cost(&mut self, d: usize, n: usize, a: &Vec<Vec<i64>>) -> i64 {
+    fn calc_area_cost(&mut self, d: usize, n_sz: usize, a: &Vec<Vec<i64>>) -> i64 {
         let mut cost = 0;
         // area
-        for j in 0..n {
+        for j in 0..n_sz {
             let area = self.rect[d][j].area();
             if a[d][j] > area {
                 cost += (a[d][j] - area) * 100;
@@ -328,10 +328,10 @@ impl State {
         cost
     }
 
-    fn calc_cost(&mut self, w: usize, d: usize, n: usize, a: &Vec<Vec<i64>>) -> i64 {
+    fn calc_cost(&mut self, w: usize, d_sz: usize, n_sz: usize, a: &Vec<Vec<i64>>) -> i64 {
         let mut cost = 0;
         // vcnt
-        for i in 0..d - 1 {
+        for i in 0..d_sz - 1 {
             for j in 0..w {
                 for k in 1..w - 1 {
                     if self.vcnt[i][j][k] == 0 && self.vcnt[i + 1][j][k] != 0
@@ -344,7 +344,7 @@ impl State {
         }
 
         // hcnt
-        for i in 0..d - 1 {
+        for i in 0..d_sz - 1 {
             for j in 1..w - 1 {
                 for k in 0..w {
                     if self.hcnt[i][j][k] == 0 && self.hcnt[i + 1][j][k] != 0
@@ -357,9 +357,9 @@ impl State {
         }
 
         // area
-        for i in 0..d {
+        for i in 0..d_sz {
             //cost += self.calc_area_cost(i, n, a);
-            for j in 0..n {
+            for j in 0..n_sz {
                 let area = self.rect[i][j].area();
                 if a[i][j] > area {
                     cost += (a[i][j] - area) * 100;
@@ -373,21 +373,21 @@ impl State {
 
 struct Solver {
     w: usize,
-    d: usize,
-    n: usize,
+    d_sz: usize,
+    n_sz: usize,
     a: Vec<Vec<i64>>,
     rng: ChaCha20Rng,
     state: State,
 }
 
 impl Solver {
-    fn new(w: usize, d: usize, n: usize, a: Vec<Vec<i64>>) -> Self {
+    fn new(w: usize, d_sz: usize, n_sz: usize, a: Vec<Vec<i64>>) -> Self {
         let mut rng = ChaCha20Rng::seed_from_u64(398578937);
-        let state = State::new(w, d, n, &mut rng);
+        let state = State::new(w, d_sz, n_sz, &mut rng);
         Solver {
             w,
-            d,
-            n,
+            d_sz,
+            n_sz,
             a,
             rng,
             state,
@@ -396,14 +396,17 @@ impl Solver {
 
     fn init(&mut self) {
         for i in 0..10000 {
-            let d = self.rng.gen_range(0..self.d);
-            let n = self.rng.gen_range(0..self.n);
+            let d = self.rng.gen_range(0..self.d_sz);
+            let n = self.rng.gen_range(0..self.n_sz);
             let dir = self.rng.gen_range(0..4);
             self.state.expand(self.w, d, n, dir, &self.a);
         }
     }
 
     fn update(&mut self) {
+        for i in 0..self.n_sz {
+
+        }
     }
 
     fn climb(&mut self, start: time::Instant) {
@@ -456,7 +459,7 @@ fn main() {
 
     solver.init();
 
-    //solver.climb(start);
+    solver.climb(start);
 
     for i in 0..d {
         for j in 0..n {
