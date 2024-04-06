@@ -45,7 +45,10 @@ struct Num {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let contest_dir = std::env::var("CONTEST_DIR")?;
+    let solver_dir = std::env::var("SOLVER_DIR")?;
     let solver_path = std::env::var("SOLVER")?;
+    build(solver_dir)?;
+    build(contest_dir.clone())?;
 
     let status = match &cli.command {
         Commands::Build => build(contest_dir),
@@ -56,11 +59,11 @@ fn main() -> Result<()> {
         Commands::VisAll => vis_all(contest_dir),
         Commands::Tester(e) => tester(e.num, &contest_dir, &solver_path),
         Commands::Score(e) => eprint_score(e.num, contest_dir),
-        Commands::ExecAll => exec_all(1, contest_dir, solver_path),
+        Commands::ExecAll => exec_all(8, contest_dir, solver_path),
         Commands::ScoreAll => score_all(contest_dir),
         Commands::TesterAll => tester_all(8, contest_dir, solver_path),
         Commands::Run(e) => run(e.num, &contest_dir, &solver_path),
-        Commands::RunAll => run_all(8, contest_dir, solver_path),
+        Commands::RunAll => run_all(1, contest_dir, solver_path),
     };
 
     match status {

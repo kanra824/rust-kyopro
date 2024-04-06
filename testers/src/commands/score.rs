@@ -3,7 +3,6 @@ use anyhow::Result;
 use std::io::Read;
 
 pub fn score(num: usize, contest_dir: String) -> Result<i64> {
-    std::fs::create_dir_all(format!("{}/score/", contest_dir))?;
     let mut file = std::fs::File::open(format!("{}/score/{:0>4}.txt", contest_dir, num))?;
     let mut str = String::new();
     file.read_to_string(&mut str)?;

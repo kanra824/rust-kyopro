@@ -3,6 +3,7 @@
 // DLUR
 static DR: [i64; 4] = [1, 0, -1, 0];
 static DC: [i64; 4] = [0, -1, 0, 1];
+static TIME_LIMIT: u64 = 2950;
 
 #[derive(Clone, Debug)]
 struct Rectangle {
@@ -96,18 +97,18 @@ impl State {
         self.vcnt[d][r][c] += val;
         let check_val = if val > 0 { 1 } else { 0 };
         let cost_val = 1 - check_val * 2; // 1 -> -1, 0 -> 1;
-        if self.vcnt[d][r][c] == check_val && c != 0 && c != self.w {
-            if d != 0 && self.vcnt[d - 1][r][c] > 0 {
-                self.cost += cost_val;
-            } else if d != 0 && self.vcnt[d - 1][r][c] == 0 {
-                self.cost -= cost_val;
-            }
-            if d != self.vcnt.len() - 1 && self.vcnt[d + 1][r][c] > 0 {
-                self.cost += cost_val;
-            } else if d != self.vcnt.len() - 1 && self.vcnt[d + 1][r][c] == 0 {
-                self.cost -= cost_val;
-            }
-        }
+        // if self.vcnt[d][r][c] == check_val && c != 0 && c != self.w {
+        //     if d != 0 && self.vcnt[d - 1][r][c] > 0 {
+        //         self.cost += cost_val;
+        //     } else if d != 0 && self.vcnt[d - 1][r][c] == 0 {
+        //         self.cost -= cost_val;
+        //     }
+        //     if d != self.vcnt.len() - 1 && self.vcnt[d + 1][r][c] > 0 {
+        //         self.cost += cost_val;
+        //     } else if d != self.vcnt.len() - 1 && self.vcnt[d + 1][r][c] == 0 {
+        //         self.cost -= cost_val;
+        //     }
+        // }
     }
 
     fn update_hcnt(&mut self, d: usize, r: usize, c: usize, val: i64) {
@@ -118,21 +119,21 @@ impl State {
         self.hcnt[d][r][c] += val;
         let check_val = if val > 0 { 1 } else { 0 };
         let cost_val = 1 - check_val * 2; // 1 -> -1, 0 -> 1;
-        if self.hcnt[d][r][c] == check_val && r != 0 && r != self.w {
-            if d != 0 && self.hcnt[d - 1][r][c] > 0 {
-                self.cost += cost_val;
-            } else if d != 0 && self.hcnt[d - 1][r][c] == 0 {
-                self.cost -= cost_val;
-            }
-            if d != self.vcnt.len() - 1 && self.hcnt[d + 1][r][c] > 0 {
-                self.cost += cost_val;
-            } else if d != self.vcnt.len() - 1 && self.hcnt[d + 1][r][c] == 0 {
-                self.cost -= cost_val;
-            }
-        }
+        // if self.hcnt[d][r][c] == check_val && r != 0 && r != self.w {
+        //     if d != 0 && self.hcnt[d - 1][r][c] > 0 {
+        //         self.cost += cost_val;
+        //     } else if d != 0 && self.hcnt[d - 1][r][c] == 0 {
+        //         self.cost -= cost_val;
+        //     }
+        //     if d != self.vcnt.len() - 1 && self.hcnt[d + 1][r][c] > 0 {
+        //         self.cost += cost_val;
+        //     } else if d != self.vcnt.len() - 1 && self.hcnt[d + 1][r][c] == 0 {
+        //         self.cost -= cost_val;
+        //     }
+        // }
     }
 
-    fn expand(&mut self, w: usize, d: usize, n: usize, dir: usize, a: &Vec<Vec<i64>>) {
+    fn expand(&mut self, w: usize, d: usize, n: usize, dir: usize, len: usize, a: &Vec<Vec<i64>>) -> bool {
         let mut rect = self.rect[d][n].clone();
 
         let prev_area_cost = self.calc_area_cost(d, self.rect[0].len(), a);
@@ -142,33 +143,42 @@ impl State {
             0 => {
                 // D
                 let mut ok = true;
-                if rect.r2 == w {
+                if rect.r2 + len > w {
                     ok = false;
                 }
                 if ok {
-                    for j in rect.c1..rect.c2 {
-                        if self.sel[d][rect.r2][j] {
-                            ok = false;
-                            break;
+                    for i in rect.r2..rect.r2+len {
+                        for j in rect.c1..rect.c2 {
+                            if self.sel[d][i][j] {
+                                ok = false;
+                                break;
+                            }
                         }
                     }
                 }
                 if ok {
-                    for j in rect.c1..rect.c2 {
-                        self.sel[d][rect.r2][j] = true;
+                    //eprintln!("Down");
+                    //eprintln!("{:?}", rect);
+                    for i in rect.r2..rect.r2+len {
+                        for j in rect.c1..rect.c2 {
+                            self.sel[d][i][j] = true;
+                        }
                     }
                     // 横
-                    self.update_vcnt(d, rect.r2, rect.c1, 1);
-                    self.update_vcnt(d, rect.r2, rect.c2, 1);
+                    for i in rect.r2..rect.r2+len {
+                        self.update_vcnt(d, i, rect.c1, 1);
+                        self.update_vcnt(d, i, rect.c2, 1);
+                    }
                     // 下消す
                     for j in rect.c1..rect.c2 {
                         self.update_hcnt(d, rect.r2, j, -1);
                     }
-                    rect.r2 += 1;
+                    rect.r2 += len;
                     // 下足す
                     for j in rect.c1..rect.c2 {
                         self.update_hcnt(d, rect.r2, j, 1);
                     }
+                    //eprintln!("{:?}", rect);
                     // 更新
                     self.rect[d][n] = rect;
                 }
@@ -177,30 +187,36 @@ impl State {
             1 => {
                 // L
                 let mut ok = true;
-                if rect.c1 == 0 {
+                if rect.c1 < len {
                     ok = false;
                 }
                 if ok {
-                    for i in rect.r1..rect.r2 {
-                        if self.sel[d][i][rect.c1 - 1] {
-                            ok = false;
-                            break;
+                    for j in rect.c1-len..rect.c1 {
+                        for i in rect.r1..rect.r2 {
+                            if self.sel[d][i][j] {
+                                ok = false;
+                                break;
+                            }
                         }
                     }
                 }
                 if ok {
-                    for i in rect.r1..rect.r2 {
-                        self.sel[d][i][rect.c1 - 1] = true;
+                    for j in rect.c1-len..rect.c1 {
+                        for i in rect.r1..rect.r2 {
+                            self.sel[d][i][j] = true;
+                        }
                     }
                     // 上下
-                    self.update_hcnt(d, rect.r1, rect.c1 - 1, 1);
-                    self.update_hcnt(d, rect.r2, rect.c1 - 1, 1);
+                    for j in rect.c1-len..rect.c1 {
+                        self.update_hcnt(d, rect.r1, j, 1);
+                        self.update_hcnt(d, rect.r2, j, 1);
+                    }
                     // 左消す
                     for i in rect.r1..rect.r2 {
                         self.update_vcnt(d, i, rect.c1, -1);
                     }
 
-                    rect.c1 -= 1;
+                    rect.c1 -= len;
                     // 左足す
                     for i in rect.r1..rect.r2 {
                         self.update_vcnt(d, i, rect.c1, 1);
@@ -214,29 +230,35 @@ impl State {
             2 => {
                 // U
                 let mut ok = true;
-                if rect.r1 == 0 {
+                if rect.r1 < len {
                     ok = false;
                 }
                 if ok {
-                    for j in rect.c1..rect.c2 {
-                        if self.sel[d][rect.r1 - 1][j] {
-                            ok = false;
-                            break;
+                    for i in rect.r1-len..rect.r1 {
+                        for j in rect.c1..rect.c2 {
+                            if self.sel[d][i][j] {
+                                ok = false;
+                                break;
+                            }
                         }
                     }
                 }
                 if ok {
-                    for j in rect.c1..rect.c2 {
-                        self.sel[d][rect.r1 - 1][j] = true;
+                    for i in rect.r1-len..rect.r1 {
+                        for j in rect.c1..rect.c2 {
+                            self.sel[d][i][j] = true;
+                        }
                     }
                     // 横
-                    self.update_vcnt(d, rect.r1 - 1, rect.c1, 1);
-                    self.update_vcnt(d, rect.r1 - 1, rect.c2, 1);
+                    for i in rect.r1-len..rect.r1 {
+                        self.update_vcnt(d, i, rect.c1, 1);
+                        self.update_vcnt(d, i, rect.c2, 1);
+                    }
                     // 上消す
                     for j in rect.c1..rect.c2 {
                         self.update_hcnt(d, rect.r1, j, -1);
                     }
-                    rect.r1 -= 1;
+                    rect.r1 -= len;
                     // 上足す
                     for j in rect.c1..rect.c2 {
                         self.update_hcnt(d, rect.r1, j, 1);
@@ -248,29 +270,35 @@ impl State {
             3 => {
                 // R
                 let mut ok = true;
-                if rect.c2 == w {
+                if rect.c2 + len > w {
                     ok = false;
                 }
                 if ok {
-                    for i in rect.r1..rect.r2 {
-                        if self.sel[d][i][rect.c2] {
-                            ok = false;
-                            break;
+                    for j in rect.c2..rect.c2+len {
+                        for i in rect.r1..rect.r2 {
+                            if self.sel[d][i][j] {
+                                ok = false;
+                                break;
+                            }
                         }
                     }
                 }
                 if ok {
-                    for i in rect.r1..rect.r2 {
-                        self.sel[d][i][rect.c2] = true;
+                    for j in rect.c2..rect.c2+len {
+                        for i in rect.r1..rect.r2 {
+                            self.sel[d][i][j] = true;
+                        }
                     }
                     // 上下
-                    self.update_hcnt(d, rect.r1, rect.c2, 1);
-                    self.update_hcnt(d, rect.r2, rect.c2, 1);
+                    for j in rect.c2..rect.c2 + len {
+                        self.update_hcnt(d, rect.r1, rect.c2, 1);
+                        self.update_hcnt(d, rect.r2, rect.c2, 1);
+                    }
                     // 右消す
                     for i in rect.r1..rect.r2 {
                         self.update_vcnt(d, i, rect.c2, -1);
                     }
-                    rect.c2 += 1;
+                    rect.c2 += len;
                     // 右足す
                     for i in rect.r1..rect.r2 {
                         self.update_vcnt(d, i, rect.c2, 1);
@@ -286,6 +314,150 @@ impl State {
             self.sort_rect(d);
             self.cost += self.calc_area_cost(d, self.rect[0].len(), a) - prev_area_cost;
         }
+
+        ok
+    }
+
+    fn shrink(&mut self, w: usize, d: usize, n: usize, dir: usize, len: usize, a: &Vec<Vec<i64>>) -> bool {
+        let mut rect = self.rect[d][n].clone();
+
+        let prev_area_cost = self.calc_area_cost(d, self.rect[0].len(), a);
+
+        // DLUR
+        let ok = match dir {
+            0 => {
+                // D
+                let mut ok = true;
+                if rect.r2 <= rect.r1 + len {
+                    ok = false;
+                }
+                if ok {
+                    for i in rect.r2-len..rect.r2 {
+                        for j in rect.c1..rect.c2 {
+                            self.sel[d][i][j] = false;
+                        }
+                    }
+                    // 横
+                    for i in rect.r2-len..rect.r2 {
+                        self.update_vcnt(d, i, rect.c1, -1);
+                        self.update_vcnt(d, i, rect.c2, -1);
+                    }
+                    // 下消す
+                    for j in rect.c1..rect.c2 {
+                        self.update_hcnt(d, rect.r2, j, -1);
+                    }
+                    rect.r2 -= len;
+                    // 下足す
+                    for j in rect.c1..rect.c2 {
+                        self.update_hcnt(d, rect.r2, j, 1);
+                    }
+                    // 更新
+                    self.rect[d][n] = rect;
+                }
+                ok
+            },
+            1 => {
+                // L
+                let mut ok = true;
+                if rect.c2 <= rect.c1 + len {
+                    ok = false;
+                }
+                if ok {
+                    for j in rect.c1..rect.c1+len {
+                        for i in rect.r1..rect.r2 {
+                            self.sel[d][i][j] = false;
+                        }
+                    }
+                    // 上下
+                    for j in rect.c1..rect.c1+len {
+                        self.update_hcnt(d, rect.r1, j, -1);
+                        self.update_hcnt(d, rect.r2, j, -1);
+                    }
+                    // 左消す
+                    for i in rect.r1..rect.r2 {
+                        self.update_vcnt(d, i, rect.c1, -1);
+                    }
+
+                    rect.c1 += len;
+                    // 左足す
+                    for i in rect.r1..rect.r2 {
+                        self.update_vcnt(d, i, rect.c1, 1);
+                    }
+
+                    // 更新
+                    self.rect[d][n] = rect;
+                }
+                ok
+            },
+            2 => {
+                // U
+                let mut ok = true;
+                if rect.r2 <= rect.r1 + len {
+                    ok = false;
+                }
+                if ok {
+                    for i in rect.r1..rect.r1+len {
+                        for j in rect.c1..rect.c2 {
+                            self.sel[d][i][j] = false;
+                        }
+                    }
+                    // 横
+                    for i in rect.r1..rect.r1+len {
+                        self.update_vcnt(d, i, rect.c1, -1);
+                        self.update_vcnt(d, i, rect.c2, -1);
+                    }
+                    // 上消す
+                    for j in rect.c1..rect.c2 {
+                        self.update_hcnt(d, rect.r1, j, -1);
+                    }
+                    rect.r1 += len;
+                    // 上足す
+                    for j in rect.c1..rect.c2 {
+                        self.update_hcnt(d, rect.r1, j, 1);
+                    }
+                    self.rect[d][n] = rect;
+                }
+                ok
+            },
+            3 => {
+                // R
+                let mut ok = true;
+                if rect.c2 <= rect.c1 + len {
+                    ok = false;
+                }
+                if ok {
+                    for j in rect.c2-len..rect.c2 {
+                        for i in rect.r1..rect.r2 {
+                            self.sel[d][i][j] = false;
+                        }
+                    }
+                    // 上下
+                    for j in rect.c2-len..rect.c2 {
+                        self.update_hcnt(d, rect.r1, j, -1);
+                        self.update_hcnt(d, rect.r2, j, -1);
+                    }
+                    // 右消す
+                    for i in rect.r1..rect.r2 {
+                        self.update_vcnt(d, i, rect.c2, -1);
+                    }
+                    rect.c2 -= len;
+                    // 右足す
+                    for i in rect.r1..rect.r2 {
+                        self.update_vcnt(d, i, rect.c2, 1);
+                    }
+                    self.rect[d][n] = rect;
+                }
+                ok
+            },
+            _ => panic!("dir must be from 0 to 3"),
+        };
+
+        if ok {
+            self.sort_rect(d);
+            self.cost += self.calc_area_cost(d, self.rect[0].len(), a) - prev_area_cost;
+        }
+
+        ok
     }
 
     /// 長方形の追加に応じて vcnt, hcnt を更新する
@@ -394,29 +566,135 @@ impl Solver {
         }
     }
 
-    fn init(&mut self) {
-        for i in 0..10000 {
-            let d = self.rng.gen_range(0..self.d_sz);
-            let n = self.rng.gen_range(0..self.n_sz);
-            let dir = self.rng.gen_range(0..4);
-            self.state.expand(self.w, d, n, dir, &self.a);
-        }
-    }
+    fn update(&mut self, len: usize, expand_p: f64, start_time: time::Instant) -> bool {
+        // d, n, dir をランダムに選択
+        // 拡大、縮小 を繰り返す
+        // TODO: 押しのけ、交換を実装する
+        let d = self.rng.gen_range(0..self.d_sz);
+        let n = self.rng.gen_range(0..self.n_sz);
+        let dir = self.rng.gen_range(0..4);
+        let p = self.rng.gen_range(0.0..1.0);
+        let prev_cost = self.state.cost;
+        let prev_rect = self.state.rect[d][n].clone();
+        let mut upd = false;
 
-    fn update(&mut self) {
-        for i in 0..self.n_sz {
-
+        let start_temp = 15000.0;
+        let end_temp = 0.0;
+        let temp = start_temp + (end_temp - start_temp) * ((time::Instant::now() - start_time).as_millis() as f64 / TIME_LIMIT as f64);
+        if p < expand_p {
+            // expand
+            let ok = self.state.expand(self.w, d, n, dir, len, &self.a);
+            if !ok {
+                return false;
+            }
+            let diff = (prev_cost - self.state.cost) as f64;
+            // eprintln!("{} : {}", prev_cost, self.state.cost);
+            // eprintln!("diff: {}", diff);
+            // eprintln!("temp: {}", temp);
+            // eprintln!("prob: {}", (diff / temp).exp());
+            upd = (diff / temp).exp() > self.rng.gen_range(0.0..0.1);
+            // if prev_cost < self.state.cost {
+            if !upd {
+                let mut prev_n = usize::MAX;
+                for i in 0..self.n_sz {
+                    let mut cnt = 0;
+                    if prev_rect.r1 == self.state.rect[d][i].r1 {
+                        cnt += 1;
+                    }
+                    if prev_rect.c1 == self.state.rect[d][i].c1 {
+                        cnt += 1;
+                    }
+                    if prev_rect.r2 == self.state.rect[d][i].r2 {
+                        cnt += 1;
+                    }
+                    if prev_rect.c2 == self.state.rect[d][i].c2 {
+                        cnt += 1;
+                    }
+                    if cnt == 3 {
+                        prev_n = i;
+                        break;
+                    }
+                }
+                self.state.shrink(self.w, d, prev_n, dir, len, &self.a);
+            }
+        } else {
+            // shrink
+            let ok = self.state.shrink(self.w, d, n, dir, len, &self.a);
+            if !ok {
+                return false;
+            }
+            let diff = (prev_cost - self.state.cost) as f64;
+            // eprintln!("{} : {}", prev_cost, self.state.cost);
+            // eprintln!("diff: {}", diff);
+            // eprintln!("temp: {}", temp);
+            // eprintln!("prob: {}", (diff / temp).exp());
+            upd = (diff / temp).exp() > self.rng.gen_range(0.0..0.1);
+            // if prev_cost < self.state.cost {
+            if !upd {
+                let mut prev_n = usize::MAX;
+                for i in 0..self.n_sz {
+                    let mut cnt = 0;
+                    if prev_rect.r1 == self.state.rect[d][i].r1 {
+                        cnt += 1;
+                    }
+                    if prev_rect.c1 == self.state.rect[d][i].c1 {
+                        cnt += 1;
+                    }
+                    if prev_rect.r2 == self.state.rect[d][i].r2 {
+                        cnt += 1;
+                    }
+                    if prev_rect.c2 == self.state.rect[d][i].c2 {
+                        cnt += 1;
+                    }
+                    if cnt == 3 {
+                        prev_n = i;
+                        break;
+                    }
+                }
+                self.state.expand(self.w, d, prev_n, dir, len, &self.a);
+            }
         }
+
+        upd
     }
 
     fn climb(&mut self, start: time::Instant) {
         // 山登り
+        eprintln!("initial cost: {}", self.state.cost);
+        let mut cnt = 0;
+
+        // 50 ずつ拡大
         loop {
-            if time::Instant::now() - start > time::Duration::from_millis(2950) {
+            if time::Instant::now() - start > time::Duration::from_millis(TIME_LIMIT / 5) {
                 break;
             }
-            self.update();
+            let res = self.update(50, 1.0, start);
+            if res {
+                cnt += 1;
+            }
         }
+        // 10ずつ拡大縮小
+        loop {
+            if time::Instant::now() - start > time::Duration::from_millis(TIME_LIMIT / 8 * 7 - 50) {
+                break;
+            }
+            let res = self.update(10, 0.5, start);
+            if res {
+                cnt += 1;
+            }
+        }
+        // 1ずつ拡大縮小
+        loop {
+            if time::Instant::now() - start > time::Duration::from_millis(TIME_LIMIT - 10) {
+                break;
+            }
+            let res = self.update(1, 0.5, start);
+            if res {
+                cnt += 1;
+            }
+        }
+        eprintln!("cnt: {}", cnt);
+        eprintln!("state.cost: {}", self.state.cost);
     }
 }
 
@@ -455,9 +733,11 @@ fn main() {
 
     let mut solver = Solver::new(w, d, n, a.clone());
 
-    solver.state.cost = solver.state.calc_cost(w, d, n, &a);
-
-    solver.init();
+    
+    // L を未考慮
+    for i in 0..d {
+        solver.state.cost += solver.state.calc_area_cost(i, n, &a);
+    }
 
     solver.climb(start);
 
