@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+mod library;
+
 fn main() {
     // // AOJ
     // let mut s = String::new();
