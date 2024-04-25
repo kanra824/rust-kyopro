@@ -1,4 +1,6 @@
 use crate::library::number::mint::Modint;
+use num_traits::Zero;
+
 const MOD: i64 = 998244353;
 type Mint = Modint<MOD>;
 

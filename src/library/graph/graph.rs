@@ -1,11 +1,11 @@
-pub struct DirectedGraph {
+pub struct Graph {
     pub n: usize,
     pub g: Vec<Vec<usize>>,
 }
 
-impl DirectedGraph {
+impl Graph {
     pub fn new(n: usize) -> Self {
-        DirectedGraph {
+        Graph {
             n: n,
             g: vec![Vec::new(); n],
         }
@@ -14,12 +14,22 @@ impl DirectedGraph {
     pub fn add_edge(&mut self, a: usize, b: usize) {
         self.g.get_mut(a).unwrap().push(b);
     }
+
+    pub fn edges(&mut self) -> Vec<(usize, usize)> {
+        let mut res = vec![];
+        for i in 0..self.n {
+            for &j in self.g[i].iter() {
+                res.push((i, j));
+            }
+        }
+        res
+    }
 }
 
 // ----- Test -----
 #[test]
 fn test_add_edge() {
-    let mut graph = DirectedGraph::new(3);
+    let mut graph = Graph::new(3);
     graph.add_edge(0, 1);
     graph.add_edge(1, 2);
     graph.add_edge(2, 0);

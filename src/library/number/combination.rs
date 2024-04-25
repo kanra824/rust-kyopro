@@ -1,4 +1,5 @@
 use super::mint::Modint;
+use num_traits::Zero;
 
 type ModintMod = i64;
 

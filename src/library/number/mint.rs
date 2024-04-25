@@ -1,4 +1,5 @@
-use std::{fmt, ops};
+use num_traits::{Num, NumOps, identities::{Zero, One}};
+use std::{fmt, num::ParseIntError, ops};
 type ModintMod = i64;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -13,10 +14,6 @@ impl<const MOD: ModintMod> std::fmt::Display for Modint<MOD> {
 }
 
 impl<const MOD: ModintMod> Modint<MOD> {
-    pub fn zero() -> Self {
-        Modint { x: 0 }
-    }
-
     pub fn new(x: ModintMod) -> Self {
         Modint { x : (x % MOD) as ModintMod }
     }
@@ -39,6 +36,30 @@ impl<const MOD: ModintMod> Modint<MOD> {
             panic!("0 has no inv");
         }
         self.pow((MOD - 2) as i64)
+    }
+}
+
+impl<const MOD: ModintMod> Num for Modint<MOD> {
+    type FromStrRadixErr = ParseIntError;
+    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
+        ModintMod::from_str_radix(str, radix)
+            .map(|x| Self::new(x))
+    }
+}
+
+impl<const MOD: ModintMod> Zero for Modint<MOD> {
+    fn zero() -> Self {
+        Modint {x: 0}
+    }
+
+    fn is_zero(&self) -> bool {
+        *self == Self::zero()
+    }
+}
+
+impl<const MOD: ModintMod> One for Modint<MOD> {
+    fn one() -> Self {
+        Modint {x: 1}
     }
 }
 
@@ -126,6 +147,15 @@ impl<const MOD: ModintMod> ops::Div<ModintMod> for Modint<MOD> {
     }
 }
 
+impl<const MOD: ModintMod> ops::Rem<Self> for Modint<MOD> {
+    // implement only for num_traits::NumOps
+    type Output = Modint<MOD>;
+    fn rem(mut self, rhs: Self) -> Modint<MOD> {
+        panic!("cannot rem");
+    }
+}
+
+
 impl<const MOD: ModintMod> ops::AddAssign<Self> for Modint<MOD> {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
@@ -181,7 +211,7 @@ mod test_modint {
 
     use rand::{self, Rng};
 
-    use super::ModintMod;
+    use super::*;
 
     #[test]
     fn test_zero() {
@@ -316,5 +346,13 @@ mod test_modint {
         m2 /= 2;
         assert_eq!(m1, m3);
         assert_eq!(m2, m3);
+    }
+
+    fn aaa<T: Num>(a: T) {
+        println!("OK!");
+    }
+
+    fn as_num() {
+        aaa(Mint::zero());
     }
 }
