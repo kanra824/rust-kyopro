@@ -2,3 +2,4 @@ target/
 .vscode/
 src/tester
 firedbg
+src/main.rs
