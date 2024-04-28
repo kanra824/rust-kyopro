@@ -20,6 +20,8 @@ use std::cmp::{max, min};
 use std::collections::*;
 use std::io::{stdin, stdout, Stdin, BufReader, Read, Write};
 use std::str::FromStr;
+use std::{fmt, ops};
+use num_traits::Num;
 
 /// 有名MODその1
 const MOD998: i64 = 998244353;
@@ -143,9 +145,10 @@ fn next_pos(w: usize, h: usize, now: (usize, usize), dir: (i64, i64)) -> Option<
     Some((nr, nc))
 }
 
+// ---------------------------------------------------------------------------------------
+// modint
 type Mint = Modint<MOD998>;
 
-use std::{fmt, ops};
 type ModintMod = i64;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -318,5 +321,59 @@ impl<const MOD: ModintMod> ops::DivAssign<Self> for Modint<MOD> {
 impl<const MOD: ModintMod> ops::DivAssign<ModintMod> for Modint<MOD> {
     fn div_assign(&mut self, rhs: ModintMod) {
         *self = *self / rhs;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Graph
+pub struct Graph<Cost: Num> {
+    pub n: usize,
+    pub g: Vec<Vec<(usize, Cost)>>,
+}
+
+impl<Cost: Num + Clone + Copy> Graph<Cost> {
+    pub fn new(n: usize) -> Self {
+        Graph {
+            n,
+            g: vec![Vec::new(); n],
+        }
+    }
+
+    pub fn add_edge(&mut self, a: usize, b: usize, cost: Cost) {
+        self.g.get_mut(a).unwrap().push((b, cost))
+    }
+
+    pub fn edges(&mut self) -> Vec<(usize, usize, Cost)> {
+        let mut res = vec![];
+        for i in 0..self.n {
+            for &(j, cost) in self.g[i].iter() {
+                res.push((i, j, cost));
+            }
+        }
+        res
+    }
+}
+
+// ----- Test -----
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_add_edge() {
+        let mut graph = Graph::new(3);
+        graph.add_edge(0, 1, 1);
+        graph.add_edge(1, 2, 2);
+        graph.add_edge(2, 0, 3);
+
+        assert_eq!(graph.g, vec![vec![(1, 1)], vec![(2, 2)], vec![(0, 3)]]);
+    }
+
+    #[test]
+    fn test_edges() {
+        let mut graph = Graph::new(3);
+        graph.add_edge(0, 1, 1);
+        graph.add_edge(1, 2, 2);
+        graph.add_edge(2, 0, 3);
+        assert_eq!(graph.edges(), vec![(0, 1, 1), (1, 2, 2), (2, 0, 3)]);
     }
 }

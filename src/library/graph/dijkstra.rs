@@ -1,5 +1,4 @@
-use super::weighted_graph::WeightedGraph;
-use num_traits::Num;
+use super::graph::Graph;
 use std::{cmp::Reverse, collections::BinaryHeap};
 
 trait Dijkstra {
@@ -7,11 +6,12 @@ trait Dijkstra {
     fn dijkstra(&self, start: usize) -> Vec<Option<Self::Cost>>;
 }
 
-impl Dijkstra for WeightedGraph<i64> {
+impl Dijkstra for Graph<i64> {
     type Cost = i64;
     fn dijkstra(&self, start: usize) -> Vec<Option<Self::Cost>> {
         let mut res = vec![None; self.n];
         let mut pq = BinaryHeap::new();
+        res[start] = Some(0);
         pq.push((0, start));
         while !pq.is_empty() {
             let (mut val, now) = pq.pop().unwrap();
@@ -23,7 +23,7 @@ impl Dijkstra for WeightedGraph<i64> {
             }
             for &(nxt, cost) in self.g[now].iter() {
                 let nxt_cost = val + cost;
-                match res[now] {
+                match res[nxt] {
                     None => {
                         pq.push((-nxt_cost, nxt));
                         res[nxt] = Some(nxt_cost);
@@ -43,7 +43,7 @@ impl Dijkstra for WeightedGraph<i64> {
 
 #[test]
 fn dijkstra_test() {
-    let mut graph = WeightedGraph::new(5);
+    let mut graph = Graph::new(5);
     graph.add_edge(0, 1, 1);
     graph.add_edge(1, 2, 2);
     graph.add_edge(2, 3, 3);

@@ -9,63 +9,17 @@ fn main() {
     // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
-    input! {
-        // from &mut source,
-        n: usize,
-        m: usize,
-        edges: [(Usize1, Usize1, i64); m],
-    }
+    
+    let base = 60.0;
 
-    let mut g = Graph::new(n);
-    let mut mp = HashMap::new();
-    for (i, &(a, b, c)) in edges.iter().enumerate() {
-        g.add_edge(a, b, c);
-        g.add_edge(b, a, c);
+    let kawamuki_v = vec![5.0, 15.1];
+    let kawamuki: f64 = kawamuki_v.iter().map(|x| base / x).sum();
 
-        mp.insert((a, b), i);
-        mp.insert((b, a), i);
-    }
+    let seizai_v = vec![20.5, 20.5, 33.0];
+    let setsudan_v = vec![20.5, 20.5, 20.5];
+    let su: f64 = seizai_v.iter().zip(setsudan_v.iter()).map(|(a, b)| (base / a).min(base / b)).sum();
 
-    let mut d = vec![(None, usize::MAX); n];
-    let mut pq = BinaryHeap::new();
-    d[0] = (Some(0i64), usize::MAX);
-    pq.push((0, 0));
-    while !pq.is_empty() {
-        let (mut nowd, now) = pq.pop().unwrap();
-        nowd = -nowd;
-        if let Some(val) = d[now].0 {
-            if nowd > val {
-                continue;
-            }
-        }
-        for &(nxt, cost) in g.g[now].iter() {
-            let nxt_cost = nowd + cost;
-            match d[nxt] {
-                (None, _) => {
-                    pq.push((-nxt_cost, nxt));
-                    d[nxt] = (Some(nxt_cost), now);
-                },
-                (Some(now_cost), _) => {
-                    if nxt_cost < now_cost {
-                        pq.push((-nxt_cost, nxt));
-                        d[nxt] = (Some(nxt_cost), now);
-                    }
-                }
-            }
-        }
-    }
-
-
-    for i in 1..n {
-        if let Some(&val) = mp.get(&(i, d[i].1)) {
-            print!("{}", val + 1);
-        }
-        if i == n - 1 {
-            println!();
-        } else {
-            print!(" ");
-        }
-    }
+    println!("{} {}", kawamuki, su);
 }
 
 use proconio::marker::{Chars, Isize1, Usize1};
@@ -74,8 +28,6 @@ use std::cmp::{max, min};
 use std::collections::*;
 use std::io::{stdin, stdout, Stdin, BufReader, Read, Write};
 use std::str::FromStr;
-use std::{fmt, ops};
-use num_traits::Num;
 
 /// 有名MODその1
 const MOD998: i64 = 998244353;
@@ -199,10 +151,9 @@ fn next_pos(w: usize, h: usize, now: (usize, usize), dir: (i64, i64)) -> Option<
     Some((nr, nc))
 }
 
-// ---------------------------------------------------------------------------------------
-// modint
 type Mint = Modint<MOD998>;
 
+use std::{fmt, ops};
 type ModintMod = i64;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -375,59 +326,5 @@ impl<const MOD: ModintMod> ops::DivAssign<Self> for Modint<MOD> {
 impl<const MOD: ModintMod> ops::DivAssign<ModintMod> for Modint<MOD> {
     fn div_assign(&mut self, rhs: ModintMod) {
         *self = *self / rhs;
-    }
-}
-
-// -----------------------------------------------------------------------------
-// Graph
-pub struct Graph<Cost: Num> {
-    pub n: usize,
-    pub g: Vec<Vec<(usize, Cost)>>,
-}
-
-impl<Cost: Num + Clone + Copy> Graph<Cost> {
-    pub fn new(n: usize) -> Self {
-        Graph {
-            n,
-            g: vec![Vec::new(); n],
-        }
-    }
-
-    pub fn add_edge(&mut self, a: usize, b: usize, cost: Cost) {
-        self.g.get_mut(a).unwrap().push((b, cost))
-    }
-
-    pub fn edges(&mut self) -> Vec<(usize, usize, Cost)> {
-        let mut res = vec![];
-        for i in 0..self.n {
-            for &(j, cost) in self.g[i].iter() {
-                res.push((i, j, cost));
-            }
-        }
-        res
-    }
-}
-
-// ----- Test -----
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_add_edge() {
-        let mut graph = Graph::new(3);
-        graph.add_edge(0, 1, 1);
-        graph.add_edge(1, 2, 2);
-        graph.add_edge(2, 0, 3);
-
-        assert_eq!(graph.g, vec![vec![(1, 1)], vec![(2, 2)], vec![(0, 3)]]);
-    }
-
-    #[test]
-    fn test_edges() {
-        let mut graph = Graph::new(3);
-        graph.add_edge(0, 1, 1);
-        graph.add_edge(1, 2, 2);
-        graph.add_edge(2, 0, 3);
-        assert_eq!(graph.edges(), vec![(0, 1, 1), (1, 2, 2), (2, 0, 3)]);
     }
 }
