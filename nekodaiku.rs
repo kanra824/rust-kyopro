@@ -12,11 +12,11 @@ fn main() {
     
     let base = 60.0;
 
-    let kawamuki_v = vec![5.0, 15.1];
+    let kawamuki_v = vec![5.0, 5.1];
     let kawamuki: f64 = kawamuki_v.iter().map(|x| base / x).sum();
 
-    let seizai_v = vec![20.5, 20.5, 33.0];
-    let setsudan_v = vec![20.5, 20.5, 20.5];
+    let seizai_v = vec![9.0, 9.0, 9.0];
+    let setsudan_v = vec![8.0, 8.0, 8.0];
     let su: f64 = seizai_v.iter().zip(setsudan_v.iter()).map(|(a, b)| (base / a).min(base / b)).sum();
 
     println!("{} {}", kawamuki, su);
