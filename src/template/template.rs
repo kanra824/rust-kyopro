@@ -1,16 +1,22 @@
 #![allow(unused)]
 
 fn main() {
-    // // AOJ
-    let mut s = String::new();
-    let stdin = stdin();
-    let mut reader = Reader::new(&mut s, stdin);
+    // // AOJ, codeforces, etc...
+    // let mut s = String::new();
+    // let stdin = stdin();
+    // let mut reader = Reader::new(&mut s, stdin);
 
     // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
+    input! {
+        // from &mut source,
+    }
+    
 }
 
+use proconio::marker::{Chars, Isize1, Usize1};
+use proconio::{input, source::line::LineSource};
 use std::cmp::{max, min};
 use std::collections::*;
 use std::io::{stdin, stdout, Stdin, BufReader, Read, Write};
@@ -101,16 +107,21 @@ impl<'a> Reader<'a> {
     }
 }
 
-// dir の方向にすすむ
-fn next_pos(w: usize, h: usize, now: (usize, usize), dir: (i64, i64)) -> Option<(usize, usize)> {
-    let nr = now.0 as i64 + dir.0;
-    let nc = now.1 as i64 + dir.1;
-    if !(0 <= nr && nr < h as i64 && 0 <= nc && nc < w as i64) {
-        return None;
+// グリッドの範囲を見てすすめるマスを列挙(壁がある場合は呼び出し側でチェック)
+fn adj_pos(w: usize, h: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
+    let mut res = vec![];
+    let dir = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+    for (dr, dc) in dir {
+        let nr = r as i64 + dr;
+        let nc = c as i64 + dc;
+        if !(0 <= nr && nr < h as i64 && 0 <= nc && nc < w as i64) {
+            continue;
+        }
+        let nr = nr as usize;
+        let nc = nc as usize;
+        res.push((nr, nc))
     }
-    let nr = nr as usize;
-    let nc = nc as usize;
-    Some((nr, nc))
+    res
 }
 
 // ---------------------------------------------------------------------------------------
@@ -316,8 +327,8 @@ impl Graph {
         }
     }
 
-    pub fn add_edge(&mut self, a: usize, b: usize, cost: Cost) {
-        self.g.get_mut(a).unwrap().push((b, cost))
+    pub fn add_edge(&mut self, a: usize, b: usize, c: Cost) {
+        self.g.get_mut(a).unwrap().push((b, c))
     }
 
     pub fn edges(&mut self) -> Vec<(usize, usize, Cost)> {
