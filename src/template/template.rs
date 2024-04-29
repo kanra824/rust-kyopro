@@ -2,26 +2,20 @@
 
 fn main() {
     // // AOJ
-    // let mut s = String::new();
-    // let stdin = stdin();
-    // let mut reader = Reader::new(&mut s, stdin);
+    let mut s = String::new();
+    let stdin = stdin();
+    let mut reader = Reader::new(&mut s, stdin);
 
     // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
-    input! {
-        // from &mut source,
-    }
 }
 
-use proconio::marker::{Chars, Isize1, Usize1};
-use proconio::{input, source::line::LineSource};
 use std::cmp::{max, min};
 use std::collections::*;
 use std::io::{stdin, stdout, Stdin, BufReader, Read, Write};
 use std::str::FromStr;
 use std::{fmt, ops};
-use num_traits::Num;
 
 /// 有名MODその1
 const MOD998: i64 = 998244353;
@@ -43,32 +37,6 @@ where
 {
     println!("{:?}", val);
 }
-
-/// 単一の値を入力する
-fn input<T: FromStr>() -> T {
-    let mut buffer = String::new();
-    stdin().read_line(&mut buffer).unwrap();
-    buffer.trim().parse().ok().unwrap()
-}
-
-/// 一行の複数の値を入力する
-fn input_vec<T: FromStr>() -> Vec<T> {
-    let mut buffer = String::new();
-    stdin().read_line(&mut buffer).unwrap();
-    let v = buffer.trim().split_whitespace().map(|e| e.parse().ok().unwrap()).collect();
-    v
-}
-
-// TODO: 複数の型が入り得る場合を処理したい（どうやって？）
-/// 複数行を入力する
-fn input_lines<T: FromStr>(n: usize) -> Vec<T> {
-    let mut v: Vec<T> = Vec::new();
-    for i in 0..n {
-        v.push(input());
-    }
-    v
-}
-
 
 struct Reader<'a> {
     stdin: Stdin,
@@ -147,28 +115,26 @@ fn next_pos(w: usize, h: usize, now: (usize, usize), dir: (i64, i64)) -> Option<
 
 // ---------------------------------------------------------------------------------------
 // modint
-type Mint = Modint<MOD998>;
-
-type ModintMod = i64;
+pub const MOD: i64 = MOD998;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Modint<const MOD: ModintMod> {
-    x: ModintMod,
+pub struct Modint {
+    x: i64,
 }
 
-impl<const MOD: ModintMod> std::fmt::Display for Modint<MOD> {
+impl std::fmt::Display for Modint {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.x)
     }
 }
 
-impl<const MOD: ModintMod> Modint<MOD> {
-    pub fn zero() -> Self {
-        Modint { x: 0 }
+impl Modint {
+    pub fn new(x: i64) -> Self {
+        Modint { x : (x % MOD) as i64 }
     }
 
-    pub fn new(x: ModintMod) -> Self {
-        Modint { x : (x % MOD) as ModintMod }
+    pub fn zero() -> Self {
+        Modint::new(0)
     }
 
     pub fn pow(&self, mut k: i64) -> Self {
@@ -192,10 +158,10 @@ impl<const MOD: ModintMod> Modint<MOD> {
     }
 }
 
-impl<const MOD: ModintMod> ops::Neg for Modint<MOD> {
-    type Output = Modint<MOD>;
+impl ops::Neg for Modint {
+    type Output = Modint;
 
-    fn neg(mut self) -> Modint<MOD> {
+    fn neg(mut self) -> Modint {
         self.x = (MOD - self.x);
         if self.x >= MOD {
             self.x -= MOD;
@@ -204,18 +170,18 @@ impl<const MOD: ModintMod> ops::Neg for Modint<MOD> {
     }
 }
 
-impl<const MOD: ModintMod> ops::Add<Self> for Modint<MOD> {
-    type Output = Modint<MOD>;
+impl ops::Add<Self> for Modint {
+    type Output = Modint;
 
-    fn add(mut self, rhs: Self) -> Modint<MOD> {
+    fn add(mut self, rhs: Self) -> Modint {
         self + rhs.x
     }
 }
 
-impl<const MOD: ModintMod> ops::Add<ModintMod> for Modint<MOD> {
-    type Output = Modint<MOD>;
+impl ops::Add<i64> for Modint {
+    type Output = Modint;
 
-    fn add(mut self, rhs: ModintMod) -> Modint<MOD> {
+    fn add(mut self, rhs: i64) -> Modint {
         self.x = (self.x + rhs);
         if self.x >= MOD {
             self.x -= MOD;
@@ -224,18 +190,18 @@ impl<const MOD: ModintMod> ops::Add<ModintMod> for Modint<MOD> {
     }
 }
 
-impl<const MOD: ModintMod> ops::Sub<Self> for Modint<MOD> {
-    type Output = Modint<MOD>;
+impl ops::Sub<Self> for Modint {
+    type Output = Modint;
 
-    fn sub(mut self, rhs: Self) -> Modint<MOD> {
+    fn sub(mut self, rhs: Self) -> Modint {
         self - rhs.x
     }
 }
 
-impl<const MOD: ModintMod> ops::Sub<ModintMod> for Modint<MOD> {
-    type Output = Modint<MOD>;
+impl ops::Sub<i64> for Modint {
+    type Output = Modint;
 
-    fn sub(mut self, rhs: ModintMod) -> Modint<MOD> {
+    fn sub(mut self, rhs: i64) -> Modint {
         self.x = (self.x + MOD - rhs);
         if self.x >= MOD {
             self.x -= MOD;
@@ -244,94 +210,105 @@ impl<const MOD: ModintMod> ops::Sub<ModintMod> for Modint<MOD> {
     }
 }
 
-impl<const MOD: ModintMod> ops::Mul<Self> for Modint<MOD> {
-    type Output = Modint<MOD>;
-    fn mul(mut self, rhs: Self) -> Modint<MOD> {
+impl ops::Mul<Self> for Modint {
+    type Output = Modint;
+    fn mul(mut self, rhs: Self) -> Modint {
         self * rhs.x
     }
 }
 
-impl<const MOD: ModintMod> ops::Mul<ModintMod> for Modint<MOD> {
-    type Output = Modint<MOD>;
-    fn mul(mut self, rhs: ModintMod) -> Modint<MOD> {
+impl ops::Mul<i64> for Modint {
+    type Output = Modint;
+    fn mul(mut self, rhs: i64) -> Modint {
         self.x = self.x * rhs % MOD;
         self
     }
 }
 
-impl<const MOD: ModintMod> ops::Div<Self> for Modint<MOD> {
-    type Output = Modint<MOD>;
-    fn div(mut self, rhs: Self) -> Modint<MOD> {
+impl ops::Div<Self> for Modint {
+    type Output = Modint;
+    fn div(mut self, rhs: Self) -> Modint {
         self / rhs.x
     }
 }
 
-impl<const MOD: ModintMod> ops::Div<ModintMod> for Modint<MOD> {
-    type Output = Modint<MOD>;
-    fn div(mut self, rhs: ModintMod) -> Modint<MOD> {
+impl ops::Div<i64> for Modint {
+    type Output = Modint;
+    fn div(mut self, rhs: i64) -> Modint {
         if rhs == 0 {
             panic!("0 division is occured");
         }
-        self * Modint::<MOD>::new(rhs).inv()
+        self * Modint::new(rhs).inv()
     }
 }
 
-impl<const MOD: ModintMod> ops::AddAssign<Self> for Modint<MOD> {
+impl ops::Rem<Self> for Modint {
+    // implement only for num_traits::NumOps
+    type Output = Modint;
+    fn rem(mut self, rhs: Self) -> Modint {
+        panic!("cannot rem");
+    }
+}
+
+
+impl ops::AddAssign<Self> for Modint {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::AddAssign<ModintMod> for Modint<MOD> {
-    fn add_assign(&mut self, rhs: ModintMod) {
+impl ops::AddAssign<i64> for Modint {
+    fn add_assign(&mut self, rhs: i64) {
         *self = *self + rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::SubAssign<Self> for Modint<MOD> {
+impl ops::SubAssign<Self> for Modint {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::SubAssign<ModintMod> for Modint<MOD> {
-    fn sub_assign(&mut self, rhs: ModintMod) {
+impl ops::SubAssign<i64> for Modint {
+    fn sub_assign(&mut self, rhs: i64) {
         *self = *self - rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::MulAssign<Self> for Modint<MOD> {
+impl ops::MulAssign<Self> for Modint {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::MulAssign<ModintMod> for Modint<MOD> {
-    fn mul_assign(&mut self, rhs: ModintMod) {
+impl ops::MulAssign<i64> for Modint {
+    fn mul_assign(&mut self, rhs: i64) {
         *self = *self * rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::DivAssign<Self> for Modint<MOD> {
+impl ops::DivAssign<Self> for Modint {
     fn div_assign(&mut self, rhs: Self) {
         *self = *self / rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::DivAssign<ModintMod> for Modint<MOD> {
-    fn div_assign(&mut self, rhs: ModintMod) {
+impl ops::DivAssign<i64> for Modint {
+    fn div_assign(&mut self, rhs: i64) {
         *self = *self / rhs;
     }
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 // Graph
-pub struct Graph<Cost: Num> {
+pub type Cost = i64;
+
+pub struct Graph {
     pub n: usize,
     pub g: Vec<Vec<(usize, Cost)>>,
 }
 
-impl<Cost: Num + Clone + Copy> Graph<Cost> {
+impl Graph {
     pub fn new(n: usize) -> Self {
         Graph {
             n,
@@ -351,29 +328,5 @@ impl<Cost: Num + Clone + Copy> Graph<Cost> {
             }
         }
         res
-    }
-}
-
-// ----- Test -----
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_add_edge() {
-        let mut graph = Graph::new(3);
-        graph.add_edge(0, 1, 1);
-        graph.add_edge(1, 2, 2);
-        graph.add_edge(2, 0, 3);
-
-        assert_eq!(graph.g, vec![vec![(1, 1)], vec![(2, 2)], vec![(0, 3)]]);
-    }
-
-    #[test]
-    fn test_edges() {
-        let mut graph = Graph::new(3);
-        graph.add_edge(0, 1, 1);
-        graph.add_edge(1, 2, 2);
-        graph.add_edge(2, 0, 3);
-        assert_eq!(graph.edges(), vec![(0, 1, 1), (1, 2, 2), (2, 0, 3)]);
     }
 }

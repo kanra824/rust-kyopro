@@ -1,11 +1,11 @@
-use num_traits::Num;
+pub type Cost = i64;
 
-pub struct Graph<Cost: Num> {
+pub struct Graph {
     pub n: usize,
     pub g: Vec<Vec<(usize, Cost)>>,
 }
 
-impl<Cost: Num + Clone + Copy> Graph<Cost> {
+impl Graph {
     pub fn new(n: usize) -> Self {
         Graph {
             n,
@@ -13,8 +13,8 @@ impl<Cost: Num + Clone + Copy> Graph<Cost> {
         }
     }
 
-    pub fn add_edge(&mut self, a: usize, b: usize, cost: Cost) {
-        self.g.get_mut(a).unwrap().push((b, cost))
+    pub fn add_edge(&mut self, a: usize, b: usize, c: Cost) {
+        self.g.get_mut(a).unwrap().push((b, c))
     }
 
     pub fn edges(&mut self) -> Vec<(usize, usize, Cost)> {

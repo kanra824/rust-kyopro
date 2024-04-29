@@ -1,14 +1,12 @@
-use super::graph::Graph;
-use std::{cmp::Reverse, collections::BinaryHeap};
+use super::graph::*;
+use std::collections::BinaryHeap;
 
 trait Dijkstra {
-    type Cost;
-    fn dijkstra(&self, start: usize) -> Vec<Option<Self::Cost>>;
+    fn dijkstra(&self, start: usize) -> Vec<Option<Cost>>;
 }
 
-impl Dijkstra for Graph<i64> {
-    type Cost = i64;
-    fn dijkstra(&self, start: usize) -> Vec<Option<Self::Cost>> {
+impl Dijkstra for Graph {
+    fn dijkstra(&self, start: usize) -> Vec<Option<Cost>> {
         let mut res = vec![None; self.n];
         let mut pq = BinaryHeap::new();
         res[start] = Some(0);

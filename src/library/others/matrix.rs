@@ -1,8 +1,6 @@
-use crate::library::number::mint::Modint;
-use num_traits::Zero;
+use crate::library::number::mint::*;
 
-const MOD: i64 = 998244353;
-type Mint = Modint<MOD>;
+type Mint = Modint;
 
 // 正方行列
 #[derive(Debug, Clone)]

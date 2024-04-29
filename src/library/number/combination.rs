@@ -1,17 +1,14 @@
-use super::mint::Modint;
-use num_traits::Zero;
+use super::mint::*;
 
-type ModintMod = i64;
-
-pub struct Combination<const MOD: ModintMod> {
+pub struct Combination {
     n: usize,
-    fact: Vec<Modint<MOD>>,
-    rfact: Vec<Modint<MOD>>,
+    fact: Vec<Modint>,
+    rfact: Vec<Modint>,
 }
 
-impl<const MOD: ModintMod> Combination<MOD> {
+impl Combination {
     pub fn new() -> Self {
-        Combination::<MOD> {
+        Combination {
             n: 1,
             fact: vec![Modint::new(1)],
             rfact: vec![Modint::new(1)],
@@ -31,18 +28,18 @@ impl<const MOD: ModintMod> Combination<MOD> {
         self.n = n;
     }
 
-    pub fn fact(&mut self, k: usize) -> Modint<MOD> {
+    pub fn fact(&mut self, k: usize) -> Modint {
         self.extend(k + 1);
         self.fact[k]
     }
 
-    pub fn rfact(&mut self, k: usize) -> Modint<MOD> {
+    pub fn rfact(&mut self, k: usize) -> Modint {
         self.extend(k + 1);
         self.rfact[k]
     }
 
     #[allow(non_snake_case)]
-    pub fn P(&mut self, n: usize, k: usize) -> Modint<MOD> {
+    pub fn P(&mut self, n: usize, k: usize) -> Modint {
         if n < k {
             Modint::zero()
         } else {
@@ -51,7 +48,7 @@ impl<const MOD: ModintMod> Combination<MOD> {
     }
 
     #[allow(non_snake_case)]
-    pub fn C(&mut self, n: usize, k: usize) -> Modint<MOD> {
+    pub fn C(&mut self, n: usize, k: usize) -> Modint {
         if n < k {
             Modint::zero()
         } else {
@@ -60,7 +57,7 @@ impl<const MOD: ModintMod> Combination<MOD> {
     }
 
     #[allow(non_snake_case)]
-    pub fn H(&mut self, n: usize, k: usize) -> Modint<MOD> {
+    pub fn H(&mut self, n: usize, k: usize) -> Modint {
         if n == 0 && k == 0 {
             Modint::new(1)
         } else {
@@ -72,13 +69,13 @@ impl<const MOD: ModintMod> Combination<MOD> {
 #[cfg(test)]
 mod tests {
 
-    type Mint = super::Modint<998244353>;
+    type Mint = super::Modint;
     const MOD998: i64 = 998244353;
 
     #[test]
     #[allow(non_snake_case)]
     fn test_C() {
-        let mut comb = super::Combination::<MOD998>::new();
+        let mut comb = super::Combination::new();
         assert_eq!(comb.C(50, 10), Mint::new(10272278170i64 % MOD998));
     }
 }

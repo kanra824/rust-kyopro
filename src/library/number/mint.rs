@@ -1,21 +1,25 @@
-use num_traits::{Num, NumOps, identities::{Zero, One}};
-use std::{fmt, num::ParseIntError, ops};
-type ModintMod = i64;
+use std::{fmt, ops};
+
+pub const MOD: i64 = 998244353;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Modint<const MOD: ModintMod> {
-    x: ModintMod,
+pub struct Modint {
+    x: i64,
 }
 
-impl<const MOD: ModintMod> std::fmt::Display for Modint<MOD> {
+impl std::fmt::Display for Modint {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.x)
     }
 }
 
-impl<const MOD: ModintMod> Modint<MOD> {
-    pub fn new(x: ModintMod) -> Self {
-        Modint { x : (x % MOD) as ModintMod }
+impl Modint {
+    pub fn new(x: i64) -> Self {
+        Modint { x : (x % MOD) as i64 }
+    }
+
+    pub fn zero() -> Self {
+        Modint::new(0)
     }
 
     pub fn pow(&self, mut k: i64) -> Self {
@@ -39,34 +43,10 @@ impl<const MOD: ModintMod> Modint<MOD> {
     }
 }
 
-impl<const MOD: ModintMod> Num for Modint<MOD> {
-    type FromStrRadixErr = ParseIntError;
-    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
-        ModintMod::from_str_radix(str, radix)
-            .map(|x| Self::new(x))
-    }
-}
+impl ops::Neg for Modint {
+    type Output = Modint;
 
-impl<const MOD: ModintMod> Zero for Modint<MOD> {
-    fn zero() -> Self {
-        Modint {x: 0}
-    }
-
-    fn is_zero(&self) -> bool {
-        *self == Self::zero()
-    }
-}
-
-impl<const MOD: ModintMod> One for Modint<MOD> {
-    fn one() -> Self {
-        Modint {x: 1}
-    }
-}
-
-impl<const MOD: ModintMod> ops::Neg for Modint<MOD> {
-    type Output = Modint<MOD>;
-
-    fn neg(mut self) -> Modint<MOD> {
+    fn neg(mut self) -> Modint {
         self.x = (MOD - self.x);
         if self.x >= MOD {
             self.x -= MOD;
@@ -75,18 +55,18 @@ impl<const MOD: ModintMod> ops::Neg for Modint<MOD> {
     }
 }
 
-impl<const MOD: ModintMod> ops::Add<Self> for Modint<MOD> {
-    type Output = Modint<MOD>;
+impl ops::Add<Self> for Modint {
+    type Output = Modint;
 
-    fn add(mut self, rhs: Self) -> Modint<MOD> {
+    fn add(mut self, rhs: Self) -> Modint {
         self + rhs.x
     }
 }
 
-impl<const MOD: ModintMod> ops::Add<ModintMod> for Modint<MOD> {
-    type Output = Modint<MOD>;
+impl ops::Add<i64> for Modint {
+    type Output = Modint;
 
-    fn add(mut self, rhs: ModintMod) -> Modint<MOD> {
+    fn add(mut self, rhs: i64) -> Modint {
         self.x = (self.x + rhs);
         if self.x >= MOD {
             self.x -= MOD;
@@ -95,18 +75,18 @@ impl<const MOD: ModintMod> ops::Add<ModintMod> for Modint<MOD> {
     }
 }
 
-impl<const MOD: ModintMod> ops::Sub<Self> for Modint<MOD> {
-    type Output = Modint<MOD>;
+impl ops::Sub<Self> for Modint {
+    type Output = Modint;
 
-    fn sub(mut self, rhs: Self) -> Modint<MOD> {
+    fn sub(mut self, rhs: Self) -> Modint {
         self - rhs.x
     }
 }
 
-impl<const MOD: ModintMod> ops::Sub<ModintMod> for Modint<MOD> {
-    type Output = Modint<MOD>;
+impl ops::Sub<i64> for Modint {
+    type Output = Modint;
 
-    fn sub(mut self, rhs: ModintMod) -> Modint<MOD> {
+    fn sub(mut self, rhs: i64) -> Modint {
         self.x = (self.x + MOD - rhs);
         if self.x >= MOD {
             self.x -= MOD;
@@ -115,99 +95,99 @@ impl<const MOD: ModintMod> ops::Sub<ModintMod> for Modint<MOD> {
     }
 }
 
-impl<const MOD: ModintMod> ops::Mul<Self> for Modint<MOD> {
-    type Output = Modint<MOD>;
-    fn mul(mut self, rhs: Self) -> Modint<MOD> {
+impl ops::Mul<Self> for Modint {
+    type Output = Modint;
+    fn mul(mut self, rhs: Self) -> Modint {
         self * rhs.x
     }
 }
 
-impl<const MOD: ModintMod> ops::Mul<ModintMod> for Modint<MOD> {
-    type Output = Modint<MOD>;
-    fn mul(mut self, rhs: ModintMod) -> Modint<MOD> {
+impl ops::Mul<i64> for Modint {
+    type Output = Modint;
+    fn mul(mut self, rhs: i64) -> Modint {
         self.x = self.x * rhs % MOD;
         self
     }
 }
 
-impl<const MOD: ModintMod> ops::Div<Self> for Modint<MOD> {
-    type Output = Modint<MOD>;
-    fn div(mut self, rhs: Self) -> Modint<MOD> {
+impl ops::Div<Self> for Modint {
+    type Output = Modint;
+    fn div(mut self, rhs: Self) -> Modint {
         self / rhs.x
     }
 }
 
-impl<const MOD: ModintMod> ops::Div<ModintMod> for Modint<MOD> {
-    type Output = Modint<MOD>;
-    fn div(mut self, rhs: ModintMod) -> Modint<MOD> {
+impl ops::Div<i64> for Modint {
+    type Output = Modint;
+    fn div(mut self, rhs: i64) -> Modint {
         if rhs == 0 {
             panic!("0 division is occured");
         }
-        self * Modint::<MOD>::new(rhs).inv()
+        self * Modint::new(rhs).inv()
     }
 }
 
-impl<const MOD: ModintMod> ops::Rem<Self> for Modint<MOD> {
+impl ops::Rem<Self> for Modint {
     // implement only for num_traits::NumOps
-    type Output = Modint<MOD>;
-    fn rem(mut self, rhs: Self) -> Modint<MOD> {
+    type Output = Modint;
+    fn rem(mut self, rhs: Self) -> Modint {
         panic!("cannot rem");
     }
 }
 
 
-impl<const MOD: ModintMod> ops::AddAssign<Self> for Modint<MOD> {
+impl ops::AddAssign<Self> for Modint {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::AddAssign<ModintMod> for Modint<MOD> {
-    fn add_assign(&mut self, rhs: ModintMod) {
+impl ops::AddAssign<i64> for Modint {
+    fn add_assign(&mut self, rhs: i64) {
         *self = *self + rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::SubAssign<Self> for Modint<MOD> {
+impl ops::SubAssign<Self> for Modint {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::SubAssign<ModintMod> for Modint<MOD> {
-    fn sub_assign(&mut self, rhs: ModintMod) {
+impl ops::SubAssign<i64> for Modint {
+    fn sub_assign(&mut self, rhs: i64) {
         *self = *self - rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::MulAssign<Self> for Modint<MOD> {
+impl ops::MulAssign<Self> for Modint {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::MulAssign<ModintMod> for Modint<MOD> {
-    fn mul_assign(&mut self, rhs: ModintMod) {
+impl ops::MulAssign<i64> for Modint {
+    fn mul_assign(&mut self, rhs: i64) {
         *self = *self * rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::DivAssign<Self> for Modint<MOD> {
+impl ops::DivAssign<Self> for Modint {
     fn div_assign(&mut self, rhs: Self) {
         *self = *self / rhs;
     }
 }
 
-impl<const MOD: ModintMod> ops::DivAssign<ModintMod> for Modint<MOD> {
-    fn div_assign(&mut self, rhs: ModintMod) {
+impl ops::DivAssign<i64> for Modint {
+    fn div_assign(&mut self, rhs: i64) {
         *self = *self / rhs;
     }
 }
 
 #[cfg(test)]
 mod test_modint {
-    const MOD998: ModintMod = 998244353;
-    type Mint = super::Modint<MOD998>;
+    const MOD998: i64 = 998244353;
+    type Mint = super::Modint;
 
     use rand::{self, Rng};
 
@@ -346,13 +326,5 @@ mod test_modint {
         m2 /= 2;
         assert_eq!(m1, m3);
         assert_eq!(m2, m3);
-    }
-
-    fn aaa<T: Num>(a: T) {
-        println!("OK!");
-    }
-
-    fn as_num() {
-        aaa(Mint::zero());
     }
 }
