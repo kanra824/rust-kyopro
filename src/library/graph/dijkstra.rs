@@ -1,4 +1,5 @@
 use super::graph::*;
+use std::collections::BinaryHeap;
 
 trait Dijkstra {
     fn dijkstra(&self, start: usize) -> Vec<Option<Cost>>;
