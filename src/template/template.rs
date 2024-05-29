@@ -36,6 +36,28 @@ where
     println!("{}", val);
 }
 
+fn pr_vec<T>(v: &Vec<T>)
+where
+    T: std::fmt::Display,
+{
+    for i in 0..v.len() {
+        print!("{}", v[i]);
+        if i == v.len()-1 {
+            println!();
+        } else {
+            print!(" ");
+        }
+    }
+}
+
+fn pr_yesno(x: bool) {
+    if x {
+        pr("Yes");
+    } else {
+        pr("No");
+    }
+}
+
 /// 単一の値をデバッグプリントするための関数
 fn pd<T>(val: T)
 where

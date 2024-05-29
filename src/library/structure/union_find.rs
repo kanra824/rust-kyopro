@@ -1,5 +1,6 @@
 //use proconio::input;
 //use proconio::marker::{Usize1, Isize1};
+#[derive(Clone)]
 pub struct UnionFind {
     n: usize,
     par: Vec<usize>,
