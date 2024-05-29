@@ -18,6 +18,7 @@ pub fn vis(num: usize) -> Result<ExitStatus> {
     if !Path::is_file(Path::new(&format!("{}/target/release/vis", &contest_dir))) {
         let status = Command::new("cargo")
             .args(["build", "-r"])
+            .current_dir(contest_dir.clone())
             .status()?;
 
         if !status.success() {
@@ -26,7 +27,7 @@ pub fn vis(num: usize) -> Result<ExitStatus> {
     }
 
     // vis のバイナリを実行
-    let status = Command::new("./target/release/vis")
+    let status = Command::new(&format!("{}/target/release/vis", &contest_dir))
         .args([&input, &output, &num])
         .current_dir(contest_dir)
         .stderr(Stdio::null())
