@@ -69,7 +69,7 @@ impl ops::Add<i64> for Modint {
     fn add(mut self, rhs: i64) -> Modint {
         self.x = (self.x + rhs);
         if self.x >= MOD {
-            self.x -= MOD;
+            self.x %= MOD;
         }
         self
     }
@@ -87,9 +87,10 @@ impl ops::Sub<i64> for Modint {
     type Output = Modint;
 
     fn sub(mut self, rhs: i64) -> Modint {
+        rhs %= MOD;
         self.x = (self.x + MOD - rhs);
         if self.x >= MOD {
-            self.x -= MOD;
+            self.x %= MOD;
         }
         self
     }
@@ -105,6 +106,7 @@ impl ops::Mul<Self> for Modint {
 impl ops::Mul<i64> for Modint {
     type Output = Modint;
     fn mul(mut self, rhs: i64) -> Modint {
+        rhs %= MOD;
         self.x = self.x * rhs % MOD;
         self
     }
