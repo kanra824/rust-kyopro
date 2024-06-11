@@ -53,7 +53,7 @@ fn ntt(a: &Vec<Modint>, depth: i64, root: &Vec<Modint>) -> Vec<Modint> {
     res
 }
 
-fn convolution(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
+pub fn convolution(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
     let sza = a.len();
     let szb = b.len();
     let mut n = 1;
@@ -92,19 +92,4 @@ fn convolution(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
         res.push(c[i] * ninv);
     }
     res
-}
-
-#[test]
-fn test_convolution() {
-    let a = vec![1, 2, 3];
-    let b = vec![2, 3, 4];
-
-    let a = a.iter().map(|&x| Modint::new(x)).collect();
-    let b = b.iter().map(|&x| Modint::new(x)).collect();
-
-    let c = convolution(a, b);
-    let expected = vec![2, 7, 16, 17, 12];
-    let expected: Vec<Modint> = expected.iter().map(|&x| Modint::new(x)).collect();
-
-    assert_eq!(c, expected);
 }

@@ -44,9 +44,3 @@ impl XorShift {
         (self.rand() % 0xFFFF) as f64 / (0xFFFF as f64 * (max - min) + min)
     }
 }
-
-#[test]
-fn test_xor_shift() {
-    let mut rng = XorShift::new();
-    println!("{}", rng.rand_double(0.0, 1.0));
-}

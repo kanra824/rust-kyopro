@@ -62,29 +62,3 @@ where
         self.query_(0, self.n, 1, a, b)
     }
 }
-
-
-// #[test]
-// fn main() {
-//     let v_in = input_vec();
-//     let n = v_in[0];
-//     let q = v_in[1];
-// 
-//     let v = vec![0; n];
-//     let mut st = SegmentTree::new(n, v, |a, b| a + b, |a, b| a + b, 0);
-// 
-//     for _ in 0..q {
-//         let v_in: Vec<i64> = input_vec();
-//         let com = v_in[0];
-//         let x = v_in[1];
-//         let y = v_in[2];
-//         if com == 0 {
-//             let x = (x - 1) as usize;
-//             st.update(x, y);
-//         } else {
-//             let x = (x - 1) as usize;
-//             let y = y as usize;
-//             println!("{}", st.query(x, y));
-//         }
-//     }
-// }

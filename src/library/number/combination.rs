@@ -66,16 +66,3 @@ impl Combination {
     }
 }
 
-#[cfg(test)]
-mod tests {
-
-    type Mint = super::Modint;
-    const MOD998: i64 = 998244353;
-
-    #[test]
-    #[allow(non_snake_case)]
-    fn test_C() {
-        let mut comb = super::Combination::new();
-        assert_eq!(comb.C(50, 10), Mint::new(10272278170i64 % MOD998));
-    }
-}
