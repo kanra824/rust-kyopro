@@ -5,3 +5,4 @@ pub mod pow;
 pub mod sieve;
 pub mod fft;
 pub mod ntt;
+pub mod moebius;

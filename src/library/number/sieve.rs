@@ -5,6 +5,9 @@ pub fn sieve(n: usize) -> Vec<bool> {
     res[0] = false;
     res[1] = false;
     for i in 2..n+1 {
+        if !res[i] {
+            continue;
+        }
         let mut j = 2 * i;
         while j <= n {
             res[j] = false;
