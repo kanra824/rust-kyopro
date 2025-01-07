@@ -36,6 +36,14 @@ impl Trie {
         now.end += 1;
     }
 
+    pub fn has_nth(&self, idx: usize) -> bool {
+        !self.child[idx].is_none()
+    }
+
+    pub fn nxt(mut self: &mut Trie, idx: usize) {
+        self = self.child[idx].as_mut().unwrap().as_mut();
+    }
+
     // 最小共通接頭辞の長さの総和
     pub fn calc_lcp_sum(&mut self, s: &Vec<char>) -> i64 {
         let mut now = self;

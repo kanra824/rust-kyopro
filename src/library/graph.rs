@@ -1,2 +1,3 @@
-pub mod graph;
+pub mod centroid;
 pub mod dijkstra;
+pub mod graph;

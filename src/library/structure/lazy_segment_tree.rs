@@ -107,3 +107,15 @@ where
         }
     }
 }
+
+fn lazy_segtree_max_update(
+    n: usize,
+) -> LazySegmentTree<
+    i64,
+    i64,
+    impl Fn(i64, i64) -> i64,
+    impl Fn(i64, i64, usize) -> i64,
+    impl Fn(i64, i64) -> i64,
+> {
+    LazySegmentTree::new(n, |a, b| a.max(b), |a, b, w| b, |a, b| a.max(b), 0i64, 0i64)
+}
