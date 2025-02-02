@@ -148,3 +148,8 @@ fn adj_pos(w: usize, h: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
     }
     res
 }
+
+fn char_to_i64(c: char) -> i64 {
+    c as u32 as i64 - '0' as u32 as i64
+}
+
