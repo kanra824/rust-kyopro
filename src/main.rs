@@ -62,6 +62,7 @@ fn output(wall_v: &Vec<Vec<bool>>, wall_h: &Vec<Vec<bool>>, actions: &Vec<Action
     }
 }
 
+#[derive(Clone)]
 enum Action {
     Add {
         i: usize,
@@ -88,21 +89,18 @@ struct State {
     wall_v: Vec<Vec<bool>>, // n * n-1
     wall_h: Vec<Vec<bool>>, // n-1 * n
     ids: Vec<Vec<usize>>,
-    caps: Vec<i64>, // id に対応する範囲の容量
-    vols: Vec<f64>, // id に対応する各マスに入っている絵の具の量
-    colors: Vec<[f64; 3]>, // idに対応する範囲の色
-    delivered: Vec<[f64; 3]>, // 
+    caps: Vec<i64>,           // id に対応する範囲の容量
+    vols: Vec<f64>,           // id に対応する各マスに入っている絵の具の量
+    colors: Vec<[f64; 3]>,    // idに対応する範囲の色
+    delivered: Vec<[f64; 3]>, //
     v: i64,
     error: f64,
     rng: ChaCha20Rng,
-    input: Input,
+    n: usize, // inputのnを保持
     lambda: usize,
 }
 
-fn get_ids(
-    wall_v: &Vec<Vec<bool>>,
-    wall_h: &Vec<Vec<bool>>
-) -> (usize, Vec<Vec<usize>>, Vec<i64>) {
+fn get_ids(wall_v: &Vec<Vec<bool>>, wall_h: &Vec<Vec<bool>>) -> (usize, Vec<Vec<usize>>, Vec<i64>) {
     let n = wall_v.len();
     let mut ids = vec![vec![usize::MAX; n]; n];
     let mut id = 0;
@@ -117,21 +115,21 @@ fn get_ids(
             let mut cap = 0;
             while let Some((i, j)) = st.pop() {
                 cap += 1;
-                if j + 1 < n && !wall_v[i][j] && ids[i][j+1] == usize::MAX {
-                    ids[i][j+1] = id;
-                    st.push((i, j+1));
+                if j + 1 < n && !wall_v[i][j] && ids[i][j + 1] == usize::MAX {
+                    ids[i][j + 1] = id;
+                    st.push((i, j + 1));
                 }
-                if i + 1 < n && !wall_h[i][j] && ids[i+1][j] == usize::MAX {
-                    ids[i+1][j] = id;
-                    st.push((i+1, j));
+                if i + 1 < n && !wall_h[i][j] && ids[i + 1][j] == usize::MAX {
+                    ids[i + 1][j] = id;
+                    st.push((i + 1, j));
                 }
-                if j > 0 && !wall_v[i][j-1] && ids[i][j-1] == usize::MAX {
-                    ids[i][j-1] = id;
-                    st.push((i, j-1));
+                if j > 0 && !wall_v[i][j - 1] && ids[i][j - 1] == usize::MAX {
+                    ids[i][j - 1] = id;
+                    st.push((i, j - 1));
                 }
-                if i > 0 && !wall_h[i-1][j] && ids[i-1][j] == usize::MAX {
-                    ids[i-1][j] = id;
-                    st.push((i-1, j));
+                if i > 0 && !wall_h[i - 1][j] && ids[i - 1][j] == usize::MAX {
+                    ids[i - 1][j] = id;
+                    st.push((i - 1, j));
                 }
             }
             caps.push(cap);
@@ -158,14 +156,18 @@ fn distance(p1: [f64; 3], p2: [f64; 3]) -> f64 {
 }
 
 impl State {
-    fn new(input: Input, wall_v: &Vec<Vec<bool>>, wall_h: &Vec<Vec<bool>>, lambda: usize) -> State {
+    fn new(
+        input: &Input,
+        wall_v: &Vec<Vec<bool>>,
+        wall_h: &Vec<Vec<bool>>,
+        lambda: usize,
+    ) -> State {
         let (id, ids, caps) = get_ids(wall_v, wall_h);
         let vols = vec![0.0; id];
         let colors = vec![[0.0; 3]; id];
-
         let rng = ChaCha20Rng::seed_from_u64(12345);
 
-        State{
+        State {
             wall_v: wall_v.clone(),
             wall_h: wall_h.clone(),
             ids,
@@ -176,33 +178,27 @@ impl State {
             v: 0,
             error: 0.0,
             rng,
-            input,
+            n: input.n,
             lambda,
         }
     }
 
-    fn apply(&mut self, action: Action) {
+    fn apply(&mut self, action: Action, input: &Input) {
         match action {
             Action::Add { i, j, k } => {
-                // ここに絵の具を追加するロジックを書く
-                // input.own[k] を (i, j) に追加
-
                 self.v += 1;
                 let id = self.ids[i][j];
                 let w = self.caps[id] as f64 - self.vols[id];
                 if w <= 1.0 {
-                    self.colors[id] = mix(self.vols[id], self.colors[id], w, self.input.own[k]);
+                    self.colors[id] = mix(self.vols[id], self.colors[id], w, input.own[k]);
                     self.vols[id] = self.caps[id] as f64;
                 } else {
-                    self.colors[id] = mix(self.vols[id], self.colors[id], 1.0, self.input.own[k]);
+                    self.colors[id] = mix(self.vols[id], self.colors[id], 1.0, input.own[k]);
                     self.vols[id] += 1.0;
                 }
             }
             Action::Deliver { i, j } => {
-                // ここに絵の具を配達するロジックを書く
-                // (i, j) の色を計算して、delivered に追加
-
-                if self.delivered.len() >= self.input.h {
+                if self.delivered.len() >= input.h {
                     panic!("Too many deliveries");
                 }
 
@@ -211,24 +207,15 @@ impl State {
                 }
 
                 let color = self.colors[self.ids[i][j]];
-                let target = self.input.target[self.delivered.len()];
-                self.error += ((color[0] - target[0]).powi(2)
-                    + (color[1] - target[1]).powi(2)
-                    + (color[2] - target[2]).powi(2))
-                    .sqrt();
+                let target = input.target[self.delivered.len()];
+                self.error += distance(color, target);
                 self.vols[self.ids[i][j]] = (self.vols[self.ids[i][j]] - 1.0).max(0.0);
                 self.delivered.push(color);
             }
             Action::Discard { i, j } => {
-                // ここに絵の具を破棄するロジックを書く
-                // (i, j) の色を削除
-
                 self.vols[self.ids[i][j]] = (self.vols[self.ids[i][j]] - 1.0).max(0.0);
             }
             Action::Toggle { i1, j1, i2, j2 } => {
-                // ここに壁を切り替えるロジックを書く
-                // wall_v と wall_h を更新
-
                 if i1 == i2 {
                     let i = i1;
                     let j = j1.min(j2);
@@ -242,14 +229,13 @@ impl State {
 
                 if self.ids[i1][j1] == self.ids[i2][j2] && ids[i1][j1] != ids[i2][j2] {
                     // split
-
                     let id1 = ids[i1][j1];
                     let id2 = ids[i2][j2];
                     let v = self.vols[self.ids[i1][j1]];
                     let mut vols = vec![0.0; id];
                     let mut colors = vec![[0.0; 3]; id];
-                    for i in 0..self.input.n {
-                        for j in 0..self.input.n {
+                    for i in 0..self.n {
+                        for j in 0..self.n {
                             vols[ids[i][j]] = self.vols[self.ids[i][j]];
                             colors[ids[i][j]] = self.colors[self.ids[i][j]];
                         }
@@ -262,7 +248,6 @@ impl State {
                     self.colors = colors;
                 } else {
                     // merge
-
                     let id = ids[i1][j1];
                     let id1 = self.ids[i1][j1];
                     let id2 = self.ids[i2][j2];
@@ -272,8 +257,8 @@ impl State {
                     let c2 = self.colors[id2];
                     let mut vols = vec![0.0; id];
                     let mut colors = vec![[0.0; 3]; id];
-                    for i in 0..self.input.n {
-                        for j in 0..self.input.n {
+                    for i in 0..self.n {
+                        for j in 0..self.n {
                             vols[ids[i][j]] = self.vols[self.ids[i][j]];
                             colors[ids[i][j]] = self.colors[self.ids[i][j]];
                         }
@@ -289,21 +274,21 @@ impl State {
         }
     }
 
-    fn gen_w(&mut self) -> Vec<Vec<f64>> {
+    fn gen_w(&mut self, k: usize) -> Vec<Vec<f64>> {
         let mut res = vec![];
-        let alpha = vec![1.0; self.input.k];
+        let alpha = vec![1.0; k];
         for i in 0..4000 {
             let dir = Dirichlet::new(&alpha).unwrap();
             let w = dir.sample(&mut self.rng);
             res.push(w);
         }
-        let alpha = vec![0.3; self.input.k];
+        let alpha = vec![0.3; k];
         for j in 0..2000 {
             let dir = Dirichlet::new(&alpha).unwrap();
             let w = dir.sample(&mut self.rng);
             res.push(w);
         }
-        let alpha = vec![3.0; self.input.k];
+        let alpha = vec![3.0; k];
         for j in 0..2000 {
             let dir = Dirichlet::new(&alpha).unwrap();
             let w = dir.sample(&mut self.rng);
@@ -312,15 +297,20 @@ impl State {
         res
     }
 
-    fn get_mi_vol(&mut self, lambda: usize, targets: &Vec<Vec<usize>>, pos_idx: usize) -> Vec<i64> {
-        // 乱択で色の配分を決める
-        let ww = self.gen_w();
+    fn get_mi_vol(
+        &mut self,
+        lambda: usize,
+        targets: &Vec<Vec<usize>>,
+        pos_idx: usize,
+        input: &Input,
+    ) -> Vec<i64> {
+        let ww = self.gen_w(input.k);
         let mut mi = f64::MAX;
-        let mut mi_vol = vec![0; self.input.k];
+        let mut mi_vol = vec![0; input.k];
         for w in &ww {
-            let mut vol = vec![0; self.input.k];
-            let mut r = vec![(0.0, 0); self.input.k];
-            for j in 0..self.input.k {
+            let mut vol = vec![0; input.k];
+            let mut r = vec![(0.0, 0); input.k];
+            for j in 0..input.k {
                 vol[j] = (lambda as f64 * w[j]).floor() as i64;
                 r[j] = ((lambda as f64 * w[j]) - vol[j] as f64, j);
             }
@@ -331,17 +321,17 @@ impl State {
             }
 
             let mut nowv = vol[0];
-            let mut nowcol = self.input.own[0];
-            for j in 1..self.input.k {
+            let mut nowcol = input.own[0];
+            for j in 1..input.k {
                 let nxtv = nowv + vol[j];
-                let nxtcol = mix(nowv as f64, nowcol, vol[j] as f64, self.input.own[j]);
+                let nxtcol = mix(nowv as f64, nowcol, vol[j] as f64, input.own[j]);
                 nowv = nxtv;
                 nowcol = nxtcol;
             }
 
             let mut error = 0.0;
             for target in &targets[pos_idx] {
-                error += distance(nowcol, self.input.target[*target]);
+                error += distance(nowcol, input.target[*target]);
             }
             if error < mi {
                 mi = error;
@@ -351,35 +341,34 @@ impl State {
         mi_vol
     }
 
-    fn solve(&mut self) -> (Vec<Vec<bool>>, Vec<Vec<bool>>, Vec<Action>) {
+    fn solve(&mut self, input: &Input) -> (Vec<Vec<bool>>, Vec<Vec<bool>>, Vec<Action>) {
         let mut wall_v = self.wall_v.clone();
         let mut wall_h = self.wall_h.clone();
-
-
         let mut actions = vec![];
 
-        // lambda * batch_cnt == input.h
-        let mut batch_cnt = self.input.h / self.lambda;
-        let mut pallet_cnt = self.input.n * self.input.n / self.lambda;
-        assert!(self.lambda * batch_cnt == self.input.h, "lambda * batch_cnt must equal input.h");
+        let mut batch_cnt = input.h / self.lambda;
+        let mut pallet_cnt = self.n * self.n / self.lambda;
+        assert!(
+            self.lambda * batch_cnt == input.h,
+            "lambda * batch_cnt must equal input.h"
+        );
 
-        let mut pos = vec![(usize::MAX, usize::MAX); self.input.h];
+        let mut pos = vec![(usize::MAX, usize::MAX); input.h];
         let mut pos_cnt = vec![0; pallet_cnt];
         let mut targets = vec![vec![]; pallet_cnt];
 
-
-        for i in 0..self.input.h {
+        for i in 0..input.h {
             if pos[i] == (usize::MAX, usize::MAX) {
                 // クラスタを決める
                 let mut v = vec![(0.0, i)];
-                for j in 1..250 { // n*n 先までみる
-                    if i + j >= self.input.h {
+                for j in 1..250 {
+                    if i + j >= input.h {
                         break;
                     }
-                    if pos[i+j] != (usize::MAX, usize::MAX) {
+                    if pos[i + j] != (usize::MAX, usize::MAX) {
                         continue;
                     }
-                    let d = distance(self.input.target[i], self.input.target[i+j]);
+                    let d = distance(input.target[i], input.target[i + j]);
                     v.push((d, i + j));
                 }
                 v.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
@@ -392,7 +381,10 @@ impl State {
                         break;
                     }
                 }
-                let (r, c) = (pos_idx / (self.input.n / self.lambda), pos_idx % (self.input.n / self.lambda) * self.lambda);
+                let (r, c) = (
+                    pos_idx / (self.n / self.lambda),
+                    pos_idx % (self.n / self.lambda) * self.lambda,
+                );
                 for j in 0..self.lambda {
                     let idx = v[j].1;
                     pos[idx] = (r, c);
@@ -400,58 +392,37 @@ impl State {
                     targets[pos_idx].push(idx);
                 }
 
-                let mi_vol = self.get_mi_vol(self.lambda, &targets, pos_idx);
-                // eprintln!("{:?}", mi_vol);
-                // eprintln!("{:?}", targets[pos_idx]);
+                let mi_vol = self.get_mi_vol(self.lambda, &targets, pos_idx, input);
 
-                for j in 0..self.input.k {
+                for j in 0..input.k {
                     let vol = mi_vol[j];
                     for _ in 0..vol {
-                        // Add action
-                        actions.push(Action::Add {
-                            i: pos_idx / (self.input.n / self.lambda),
-                            j: pos_idx % (self.input.n / self.lambda) * self.lambda,
+                        let add_action = Action::Add {
+                            i: pos_idx / (self.n / self.lambda),
+                            j: pos_idx % (self.n / self.lambda) * self.lambda,
                             k: j,
-                        });
-                        self.apply(Action::Add {
-                            i: pos_idx / (self.input.n / self.lambda),
-                            j: pos_idx % (self.input.n / self.lambda) * self.lambda,
-                            k: j,
-                        });
+                        };
+                        actions.push(add_action.clone());
+                        self.apply(add_action, input);
                     }
                 }
             }
-            // i番目を届ける
+
             let (r, c) = pos[i];
-            let pos_idx = r * (self.input.n / self.lambda) + c / self.lambda;
+            let pos_idx = r * (self.n / self.lambda) + c / self.lambda;
 
-            // eprintln!("{} {}", r, c);
-            // eprintln!("pos_cnt: {}", pos_cnt[pos_idx]);
-            // eprintln!("vol: {}", self.vols[self.ids[r][c]]);
-
-            actions.push(Action::Deliver {
-                i: r,
-                j: c,
-            });
-            self.apply(Action::Deliver {
-                i: r,
-                j: c,
-            });
+            let deliver_action = Action::Deliver { i: r, j: c };
+            actions.push(deliver_action.clone());
+            self.apply(deliver_action, input);
             pos_cnt[pos_idx] -= 1;
 
             // pos_cnt がゼロになったら掃除する
             if pos_cnt[pos_idx] == 0 {
                 targets[pos_idx].clear();
-                // Discard action
                 while self.vols[self.ids[r][c]] > 1.0 {
-                    actions.push(Action::Discard {
-                        i: r,
-                        j: c,
-                    });
-                    self.apply(Action::Discard {
-                        i: r,
-                        j: c,
-                    });
+                    let discard_action = Action::Discard { i: r, j: c };
+                    actions.push(discard_action.clone());
+                    self.apply(discard_action, input);
                 }
             }
         }
@@ -479,17 +450,17 @@ fn main() {
 
     for i in 0..n {
         for j in 1..(n / lambda) {
-            wall_v[i][j*lambda - 1] = true;
+            wall_v[i][j * lambda - 1] = true;
         }
     }
 
-    for i in 0..n-1 {
+    for i in 0..n - 1 {
         for j in 0..n {
             wall_h[i][j] = true;
         }
     }
-    let mut state = State::new(input, &wall_v, &wall_h, lambda);
-    let (wall_v, wall_h, actions) = state.solve();
+    let mut state = State::new(&input, &wall_v, &wall_h, lambda);
+    let (wall_v, wall_h, actions) = state.solve(&input);
     output(&wall_v, &wall_h, &actions);
 }
 
@@ -632,4 +603,3 @@ fn adj_pos(w: usize, h: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
 fn char_to_i64(c: char) -> i64 {
     c as u32 as i64 - '0' as u32 as i64
 }
-
