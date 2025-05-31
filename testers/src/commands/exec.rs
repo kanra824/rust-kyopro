@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::fs::File;
-use std::os::unix::io::{AsRawFd, FromRawFd};
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::Arc;
 use std::thread;
@@ -10,11 +9,11 @@ pub fn exec(num: usize, contest_dir: &str, solver_path: &str) -> Result<ExitStat
     let num = format!("{:0>4}", num);
 
     let input = File::open(format!("{}/in/{}.txt", contest_dir, num)).unwrap();
-    let input = unsafe { Stdio::from_raw_fd(input.as_raw_fd()) };
+    let input = Stdio::from(input);
 
     std::fs::create_dir_all(contest_dir.to_string() + "/out")?;
     let output = File::create(format!("{}/out/{}.txt", contest_dir, num)).unwrap();
-    let output = unsafe { Stdio::from_raw_fd(output.as_raw_fd()) };
+    let output = Stdio::from(output);
 
     let status = Command::new(solver_path)
         .stdin(input)

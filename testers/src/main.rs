@@ -63,7 +63,7 @@ fn main() -> Result<()> {
         Commands::ScoreAll => score_all(contest_dir),
         Commands::TesterAll => tester_all(8, contest_dir, solver_path),
         Commands::Run(e) => run(e.num, &contest_dir, &solver_path),
-        Commands::RunAll => run_all(1, contest_dir, solver_path),
+        Commands::RunAll => run_all(8, contest_dir, solver_path),
     };
 
     match status {

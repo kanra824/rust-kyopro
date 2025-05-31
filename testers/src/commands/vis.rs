@@ -30,7 +30,7 @@ pub fn vis(num: usize) -> Result<ExitStatus> {
     let status = Command::new(&format!("{}/target/release/vis", &contest_dir))
         .args([&input, &output, &num])
         .current_dir(contest_dir)
-        .stderr(Stdio::null())
+        //.stderr(Stdio::null())
         .status()?;
 
     Ok(status)
