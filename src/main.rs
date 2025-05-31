@@ -96,6 +96,7 @@ struct State {
     error: f64,
     rng: ChaCha20Rng,
     input: Input,
+    lambda: usize,
 }
 
 fn get_ids(
@@ -157,7 +158,7 @@ fn distance(p1: [f64; 3], p2: [f64; 3]) -> f64 {
 }
 
 impl State {
-    fn new(input: Input, wall_v: &Vec<Vec<bool>>, wall_h: &Vec<Vec<bool>>) -> State {
+    fn new(input: Input, wall_v: &Vec<Vec<bool>>, wall_h: &Vec<Vec<bool>>, lambda: usize) -> State {
         let (id, ids, caps) = get_ids(wall_v, wall_h);
         let vols = vec![0.0; id];
         let colors = vec![[0.0; 3]; id];
@@ -176,6 +177,7 @@ impl State {
             error: 0.0,
             rng,
             input,
+            lambda,
         }
     }
 
@@ -288,11 +290,22 @@ impl State {
     }
 
     fn gen_w(&mut self) -> Vec<Vec<f64>> {
-        let alpha = vec![1.0; self.input.k];
-        let dir = Dirichlet::new(&alpha).unwrap();
         let mut res = vec![];
-        let mut sample_cnt = 5000; // 5000回くらい
-        for i in 0..sample_cnt {
+        let alpha = vec![1.0; self.input.k];
+        for i in 0..4000 {
+            let dir = Dirichlet::new(&alpha).unwrap();
+            let w = dir.sample(&mut self.rng);
+            res.push(w);
+        }
+        let alpha = vec![0.3; self.input.k];
+        for j in 0..2000 {
+            let dir = Dirichlet::new(&alpha).unwrap();
+            let w = dir.sample(&mut self.rng);
+            res.push(w);
+        }
+        let alpha = vec![3.0; self.input.k];
+        for j in 0..2000 {
+            let dir = Dirichlet::new(&alpha).unwrap();
             let w = dir.sample(&mut self.rng);
             res.push(w);
         }
@@ -339,15 +352,16 @@ impl State {
     }
 
     fn solve(&mut self) -> (Vec<Vec<bool>>, Vec<Vec<bool>>, Vec<Action>) {
-        let wall_v = self.wall_v.clone();
-        let wall_h = self.wall_h.clone();
+        let mut wall_v = self.wall_v.clone();
+        let mut wall_h = self.wall_h.clone();
+
+
         let mut actions = vec![];
 
         // lambda * batch_cnt == input.h
-        let lambda = 5;
-        let mut batch_cnt = self.input.h / lambda;
-        let mut pallet_cnt = self.input.n * self.input.n / lambda;
-        assert!(lambda * batch_cnt == self.input.h, "lambda * batch_cnt must equal input.h");
+        let mut batch_cnt = self.input.h / self.lambda;
+        let mut pallet_cnt = self.input.n * self.input.n / self.lambda;
+        assert!(self.lambda * batch_cnt == self.input.h, "lambda * batch_cnt must equal input.h");
 
         let mut pos = vec![(usize::MAX, usize::MAX); self.input.h];
         let mut pos_cnt = vec![0; pallet_cnt];
@@ -358,7 +372,13 @@ impl State {
             if pos[i] == (usize::MAX, usize::MAX) {
                 // クラスタを決める
                 let mut v = vec![(0.0, i)];
-                for j in 1..400 { // n*n 先までみる
+                for j in 1..250 { // n*n 先までみる
+                    if i + j >= self.input.h {
+                        break;
+                    }
+                    if pos[i+j] != (usize::MAX, usize::MAX) {
+                        continue;
+                    }
                     let d = distance(self.input.target[i], self.input.target[i+j]);
                     v.push((d, i + j));
                 }
@@ -372,36 +392,43 @@ impl State {
                         break;
                     }
                 }
-                let (r, c) = (pos_idx / (self.input.n / lambda), pos_idx % (self.input.n / lambda) * lambda);
-                for j in 0..lambda {
+                let (r, c) = (pos_idx / (self.input.n / self.lambda), pos_idx % (self.input.n / self.lambda) * self.lambda);
+                for j in 0..self.lambda {
                     let idx = v[j].1;
                     pos[idx] = (r, c);
                     pos_cnt[pos_idx] += 1;
                     targets[pos_idx].push(idx);
                 }
 
-                let mi_vol = self.get_mi_vol(lambda, &targets, pos_idx);
+                let mi_vol = self.get_mi_vol(self.lambda, &targets, pos_idx);
+                // eprintln!("{:?}", mi_vol);
+                // eprintln!("{:?}", targets[pos_idx]);
 
                 for j in 0..self.input.k {
                     let vol = mi_vol[j];
                     for _ in 0..vol {
                         // Add action
                         actions.push(Action::Add {
-                            i: pos_idx / (self.input.n / lambda),
-                            j: pos_idx % (self.input.n / lambda) * lambda,
+                            i: pos_idx / (self.input.n / self.lambda),
+                            j: pos_idx % (self.input.n / self.lambda) * self.lambda,
                             k: j,
                         });
                         self.apply(Action::Add {
-                            i: pos_idx / (self.input.n / lambda),
-                            j: pos_idx % (self.input.n / lambda) * lambda,
+                            i: pos_idx / (self.input.n / self.lambda),
+                            j: pos_idx % (self.input.n / self.lambda) * self.lambda,
                             k: j,
                         });
                     }
                 }
             }
             // i番目を届ける
-
             let (r, c) = pos[i];
+            let pos_idx = r * (self.input.n / self.lambda) + c / self.lambda;
+
+            // eprintln!("{} {}", r, c);
+            // eprintln!("pos_cnt: {}", pos_cnt[pos_idx]);
+            // eprintln!("vol: {}", self.vols[self.ids[r][c]]);
+
             actions.push(Action::Deliver {
                 i: r,
                 j: c,
@@ -410,11 +437,11 @@ impl State {
                 i: r,
                 j: c,
             });
-            let pos_idx = r * (self.input.n / lambda) + c / lambda;
             pos_cnt[pos_idx] -= 1;
 
             // pos_cnt がゼロになったら掃除する
             if pos_cnt[pos_idx] == 0 {
+                targets[pos_idx].clear();
                 // Discard action
                 while self.vols[self.ids[r][c]] > 1.0 {
                     actions.push(Action::Discard {
@@ -445,7 +472,23 @@ fn main() {
 
     let input = input();
     let n = input.n;
-    let mut state = State::new(input, &vec![vec![false; n - 1]; n], &vec![vec![false; n]; n - 1]);
+    let lambda = 5;
+
+    let mut wall_v = vec![vec![false; n - 1]; n];
+    let mut wall_h = vec![vec![false; n]; n - 1];
+
+    for i in 0..n {
+        for j in 1..(n / lambda) {
+            wall_v[i][j*lambda - 1] = true;
+        }
+    }
+
+    for i in 0..n-1 {
+        for j in 0..n {
+            wall_h[i][j] = true;
+        }
+    }
+    let mut state = State::new(input, &wall_v, &wall_h, lambda);
     let (wall_v, wall_h, actions) = state.solve();
     output(&wall_v, &wall_h, &actions);
 }
