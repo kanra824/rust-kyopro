@@ -357,6 +357,9 @@ impl State {
         let mut pos_cnt = vec![0; pallet_cnt];
         let mut targets = vec![vec![]; pallet_cnt];
 
+        // クラスタを確定させるところとアクションを実行するところは分けられるはず
+        // クラスタ確定 -> ターゲットごとに追加と配達を実行
+
         for i in 0..input.h {
             if pos[i] == (usize::MAX, usize::MAX) {
                 // クラスタを決める
