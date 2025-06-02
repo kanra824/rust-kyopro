@@ -62,7 +62,7 @@ fn output(wall_v: &Vec<Vec<bool>>, wall_h: &Vec<Vec<bool>>, actions: &Vec<Action
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum Action {
     Add {
         i: usize,
@@ -83,6 +83,47 @@ enum Action {
         i2: usize,
         j2: usize,
     },
+}
+
+struct Pallet {
+    sz_v: Vec<usize>,           // id に対するサイズの列
+    pos_v: Vec<(usize, usize)>, // id に対する pos の列
+}
+
+impl Pallet {
+    fn new(input: &Input) -> (Pallet, Vec<Vec<bool>>, Vec<Vec<bool>>) {
+        // 適当なサイズで配置を作成する
+        // ここでは lambda = 5 と固定して 80 個に分割する
+        let n = input.n;
+        let sz_v = vec![5; 80];
+
+        // 0 1 2 3 4
+        // 5 6 7 8 9
+        // .....
+        let mut pos_v = vec![];
+        for i in 0..input.n {
+            for j in 0..4 {
+                pos_v.push((i, j * (n / 4)));
+            }
+        }
+        let mut wall_v = vec![vec![false; n - 1]; n];
+        let mut wall_h = vec![vec![false; n]; n - 1];
+        for i in 0..n {
+            for j in 1..(n / 5) {
+                wall_v[i][j * 5 - 1] = true;
+            }
+        }
+
+        for i in 0..n - 1 {
+            for j in 0..n {
+                wall_h[i][j] = true;
+            }
+        }
+
+
+
+        (Pallet { sz_v, pos_v }, wall_v, wall_h)
+    }
 }
 
 struct State {
@@ -297,11 +338,11 @@ impl State {
         res
     }
 
+    // 乱択でやってるけど lambda が小さかったら全探索できるはず
     fn get_mi_vol(
         &mut self,
         lambda: usize,
-        targets: &Vec<Vec<usize>>,
-        pos_idx: usize,
+        targets: &Vec<usize>,
         input: &Input,
     ) -> Vec<i64> {
         let ww = self.gen_w(input.k);
@@ -330,8 +371,8 @@ impl State {
             }
 
             let mut error = 0.0;
-            for target in &targets[pos_idx] {
-                error += distance(nowcol, input.target[*target]);
+            for &target in targets {
+                error += distance(nowcol, input.target[target]);
             }
             if error < mi {
                 mi = error;
@@ -341,96 +382,102 @@ impl State {
         mi_vol
     }
 
-    fn solve(&mut self, input: &Input) -> (Vec<Vec<bool>>, Vec<Vec<bool>>, Vec<Action>) {
-        let mut wall_v = self.wall_v.clone();
-        let mut wall_h = self.wall_h.clone();
-        let mut actions = vec![];
+    fn calc_targets(&self, input: &Input, pallet: &Pallet) -> (Vec<Vec<Vec<usize>>>, Vec<(usize, usize)>) {
+        let mut targets = vec![vec![]; pallet.sz_v.len()];
+        let mut targets_rev = vec![(usize::MAX, usize::MAX); input.h];
 
-        let mut batch_cnt = input.h / self.lambda;
-        let mut pallet_cnt = self.n * self.n / self.lambda;
-        assert!(
-            self.lambda * batch_cnt == input.h,
-            "lambda * batch_cnt must equal input.h"
-        );
+        let mut well_cnt = vec![0; pallet.sz_v.len()];
+        for i in 0..input.h {
+            if targets_rev[i] != (usize::MAX, usize::MAX) {
+                // すでに決まっているターゲットはスキップ
+                well_cnt[targets_rev[i].0] -= 1;
+                continue;
+            }
 
-        let mut pos = vec![(usize::MAX, usize::MAX); input.h];
-        let mut pos_cnt = vec![0; pallet_cnt];
-        let mut targets = vec![vec![]; pallet_cnt];
+            let mut v = vec![(0.0, i)];
+            for j in 1..250 {
+                if i + j >= input.h {
+                    break;
+                }
+                if targets_rev[i + j] != (usize::MAX, usize::MAX) {
+                    continue;
+                }
+                let d = distance(input.target[i], input.target[i + j]);
+                v.push((d, i + j));
+            }
+            v.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+            for j in 0..pallet.sz_v.len() {
+                if well_cnt[j] == 0 {
+                    // 空いている場所を見つける
+                    targets[j].push(vec![]);
+                    for k in 0..self.lambda {
+                        let idx = v[k].1;
+                        targets[j].last_mut().unwrap().push(idx);
+                        targets_rev[idx] = (j, targets[j].len() - 1);
+                    }
+                    well_cnt[j] += self.lambda;
+                    break;
+                }
+            }
+            well_cnt[targets_rev[i].0] -= 1;
 
+        }
+        (targets, targets_rev)
+    }
+
+    fn solve(&mut self, input: &Input, pallet: &Pallet) -> Vec<Action> {
         // クラスタを確定させるところとアクションを実行するところは分けられるはず
         // クラスタ確定 -> ターゲットごとに追加と配達を実行
 
+        // クラスタの表現 id -> に対するsz の配列を作成しておく
+        // これがわかると id に対する pos の配列がわかる
+        // sz に対して pos を一つ割り当てられればよい？
+        // id にたいする残り容量もわかるとよい
+        // target_id -> well_id -> pos の順に引ければいい
+        // posごとに、ターゲットのリストをサイズごとに持つ (Vec<Vec<usize>>)
+
+        self.lambda = 5;
+        let (targets, targets_rev) = self.calc_targets(input, pallet);
+        let mut actions = vec![];
+        let mut well_cnt = vec![0; pallet.sz_v.len()];
+
         for i in 0..input.h {
-            if pos[i] == (usize::MAX, usize::MAX) {
-                // クラスタを決める
-                let mut v = vec![(0.0, i)];
-                for j in 1..250 {
-                    if i + j >= input.h {
-                        break;
-                    }
-                    if pos[i + j] != (usize::MAX, usize::MAX) {
-                        continue;
-                    }
-                    let d = distance(input.target[i], input.target[i + j]);
-                    v.push((d, i + j));
-                }
-                v.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-
-                // pos を決める。空いている場所を使う
-                let mut pos_idx = 0;
-                for k in 0..pallet_cnt {
-                    if pos_cnt[k] == 0 {
-                        pos_idx = k;
-                        break;
-                    }
-                }
-                let (r, c) = (
-                    pos_idx / (self.n / self.lambda),
-                    pos_idx % (self.n / self.lambda) * self.lambda,
+            let well_id = targets_rev[i].0;
+            let (well_r, well_c) = pallet.pos_v[well_id];
+            if well_cnt[well_id] == 0 {
+                //eprintln!("Add {} {} {} {}", i, well_id, well_r, well_c);
+                // 絵の具を追加
+                let mi_vol = self.get_mi_vol(
+                    self.lambda,
+                    &targets[well_id][targets_rev[i].1],
+                    input,
                 );
-                for j in 0..self.lambda {
-                    let idx = v[j].1;
-                    pos[idx] = (r, c);
-                    pos_cnt[pos_idx] += 1;
-                    targets[pos_idx].push(idx);
-                }
-
-                let mi_vol = self.get_mi_vol(self.lambda, &targets, pos_idx, input);
 
                 for j in 0..input.k {
                     let vol = mi_vol[j];
                     for _ in 0..vol {
                         let add_action = Action::Add {
-                            i: pos_idx / (self.n / self.lambda),
-                            j: pos_idx % (self.n / self.lambda) * self.lambda,
+                            i: well_r,
+                            j: well_c,
                             k: j,
                         };
                         actions.push(add_action.clone());
-                        self.apply(add_action, input);
+                        // self.apply(add_action, input);
+                        well_cnt[well_id] += 1;
                     }
                 }
             }
 
-            let (r, c) = pos[i];
-            let pos_idx = r * (self.n / self.lambda) + c / self.lambda;
-
-            let deliver_action = Action::Deliver { i: r, j: c };
+            // i 番目を配達
+            // eprintln!("{} {} {}", i, well_r, well_c);
+            // eprintln!("{}", self.vols[self.ids[well_r][well_c]]);
+            let deliver_action = Action::Deliver { i: well_r, j: well_c };
             actions.push(deliver_action.clone());
-            self.apply(deliver_action, input);
-            pos_cnt[pos_idx] -= 1;
-
-            // pos_cnt がゼロになったら掃除する
-            if pos_cnt[pos_idx] == 0 {
-                targets[pos_idx].clear();
-                while self.vols[self.ids[r][c]] > 1.0 {
-                    let discard_action = Action::Discard { i: r, j: c };
-                    actions.push(discard_action.clone());
-                    self.apply(discard_action, input);
-                }
-            }
+            // self.apply(deliver_action, input);
+            well_cnt[well_id] -= 1;
         }
 
-        (wall_v, wall_h, actions)
+        actions
     }
 }
 
@@ -448,22 +495,10 @@ fn main() {
     let n = input.n;
     let lambda = 5;
 
-    let mut wall_v = vec![vec![false; n - 1]; n];
-    let mut wall_h = vec![vec![false; n]; n - 1];
+    let (pallet, wall_v, wall_h) = Pallet::new(&input);
 
-    for i in 0..n {
-        for j in 1..(n / lambda) {
-            wall_v[i][j * lambda - 1] = true;
-        }
-    }
-
-    for i in 0..n - 1 {
-        for j in 0..n {
-            wall_h[i][j] = true;
-        }
-    }
     let mut state = State::new(&input, &wall_v, &wall_h, lambda);
-    let (wall_v, wall_h, actions) = state.solve(&input);
+    let actions = state.solve(&input, &pallet);
     output(&wall_v, &wall_h, &actions);
 }
 
