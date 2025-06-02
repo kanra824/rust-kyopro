@@ -182,14 +182,38 @@ impl SAState {
         }
     }
 
-    fn update(&mut self, input: &Input) {
+    fn update(&mut self, input: &Input, pallet: &Pallet, rng: &mut ChaCha20Rng) {
+        // ターゲットのインデックスを2つ選んで、入れるターゲットを入れ替える
+        let mut x = 0;
+        let mut y = 0;
+        while x == y {
+            x = rng.gen_range(0..input.h);
+            y = rng.gen_range(0..input.h);
+        }
 
+        if self.targets_rev[x] == self.targets_rev[y] {
+            // 同じウェルに入っている場合はスキップ
+            return;
+        }
+
+        let (well_id_x, pos_id_x) = self.targets_rev[x];
+        let (well_id_y, pos_id_y) = self.targets_rev[y];
+
+        // x のターゲットを y のターゲットに入れ替える
+        let idx_x = self.targets[well_id_x][pos_id_x].iter().position(|&v| v == x).unwrap();
+        let idx_y = self.targets[well_id_y][pos_id_y].iter().position(|&v| v == y).unwrap();
+        self.targets[well_id_x][pos_id_x][idx_x] = y;
+        self.targets[well_id_y][pos_id_y][idx_y] = x;
+        // targets_rev を更新
+        self.targets_rev[x] = (well_id_y, pos_id_y);
+        self.targets_rev[y] = (well_id_x, pos_id_x);
     }
 
     fn get_score(&self, input: &Input, pallet: &Pallet, lambda: usize, rng: &mut ChaCha20Rng) -> f64 {
         let mut res = 0.0;
 
         let mut well_cnt = vec![0; pallet.sz_v.len()];
+        let mut well_ids = vec![0; pallet.sz_v.len()];
         for i in 0..input.h {
             let well_id = self.targets_rev[i].0;
             let (well_r, well_c) = pallet.pos_v[well_id];
@@ -209,12 +233,16 @@ impl SAState {
                 for j in 0..input.k {
                     let vol = mi_vol[j];
                     well_cnt[well_id] += vol;
+                    well_ids[well_id] = self.targets_rev[i].1;
                     nowcol = mix(nowvol, nowcol, vol as f64, input.own[j]);
                     nowvol += vol as f64;
                 }
                 for &cand in &self.targets[well_id][self.targets_rev[i].1] {
                     res += distance(nowcol, input.target[cand]);
                 }
+            } else if well_ids[well_id] != self.targets_rev[i].1 {
+                // 同じウェルに入っている場合はスキップ
+                return 1e6;
             }
 
             // i 番目を配達
@@ -419,24 +447,40 @@ impl State {
     fn gen_w(k: usize, rng: &mut ChaCha20Rng) -> Vec<Vec<f64>> {
         let mut res = vec![];
         let alpha = vec![1.0; k];
-        for i in 0..4000 {
-            let dir = Dirichlet::new(&alpha).unwrap();
-            let w = dir.sample(rng);
-            res.push(w);
-        }
-        let alpha = vec![0.3; k];
-        for j in 0..2000 {
-            let dir = Dirichlet::new(&alpha).unwrap();
-            let w = dir.sample(rng);
-            res.push(w);
-        }
-        let alpha = vec![3.0; k];
-        for j in 0..2000 {
+        for i in 0..8000 {
             let dir = Dirichlet::new(&alpha).unwrap();
             let w = dir.sample(rng);
             res.push(w);
         }
         res
+    }
+
+    fn dfs(now: usize, nowcol: [f64; 3], nowvol: i64, cnt: usize, lambda: usize, vol: &mut Vec<i64>, input: &Input, targets: &Vec<usize>, error_min: &mut f64, res: &mut Vec<i64>) {
+        if now == input.k {
+            if cnt == lambda {
+                // ここで誤差を計算して、最小のものを res に保存
+                let mut error = 0.0;
+                for &target in targets {
+                    error += distance(nowcol, input.target[target]);
+                }
+                if error < *error_min {
+                    *error_min = error;
+                    res.clear();
+                    res.extend(vol.iter().cloned());
+                }
+            }
+        } else {
+            for i in 0..=lambda {
+                if cnt + i > lambda {
+                    break;
+                }
+                vol[now] = i as i64;
+                let nxtcol = mix(nowvol as f64, nowcol, i as f64, input.own[now]);
+                let nxtvol = nowvol + i as i64;
+                State::dfs(now + 1, nxtcol, nxtvol, cnt + i, lambda, vol, input, targets, error_min, res);
+                vol[now] = 0;
+            }
+        }
     }
 
     // 乱択でやってるけど lambda が小さかったら全探索できるはず
@@ -446,41 +490,63 @@ impl State {
         input: &Input,
         rng: &mut ChaCha20Rng,
     ) -> Vec<i64> {
-        let ww = State::gen_w(input.k, rng);
-        let mut mi = f64::MAX;
-        let mut mi_vol = vec![0; input.k];
-        for w in &ww {
-            let mut vol = vec![0; input.k];
-            let mut r = vec![(0.0, 0); input.k];
-            for j in 0..input.k {
-                vol[j] = (lambda as f64 * w[j]).floor() as i64;
-                r[j] = ((lambda as f64 * w[j]) - vol[j] as f64, j);
-            }
-            r.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-            r.reverse();
-            for j in 0..lambda - vol.iter().sum::<i64>() as usize {
-                vol[r[j].1] += 1;
-            }
+        // DP に書き換える？
+        // k <= 20
+        // lambda <= 5
+        // k から lambda 個選ぶときの、誤差の最小
+        let mut vol = vec![0; input.k];
+        let mut res = vec![];
+        let mut error_min = f64::MAX;
+        State::dfs(
+            0,
+            [0.0; 3],
+            0,
+            0,
+            lambda,
+            &mut vol,
+            input,
+            targets,
+            &mut error_min,
+            &mut res,
+        );
 
-            let mut nowv = vol[0];
-            let mut nowcol = input.own[0];
-            for j in 1..input.k {
-                let nxtv = nowv + vol[j];
-                let nxtcol = mix(nowv as f64, nowcol, vol[j] as f64, input.own[j]);
-                nowv = nxtv;
-                nowcol = nxtcol;
-            }
 
-            let mut error = 0.0;
-            for &target in targets {
-                error += distance(nowcol, input.target[target]);
-            }
-            if error < mi {
-                mi = error;
-                mi_vol = vol.clone();
-            }
-        }
-        mi_vol
+        // 乱択のコードは残しておく
+        // let ww = State::gen_w(input.k, rng);
+        // let mut mi = f64::MAX;
+        // let mut mi_vol = vec![0; input.k];
+        // for w in &ww {
+        //     let mut vol = vec![0; input.k];
+        //     let mut r = vec![(0.0, 0); input.k];
+        //     for j in 0..input.k {
+        //         vol[j] = (lambda as f64 * w[j]).floor() as i64;
+        //         r[j] = ((lambda as f64 * w[j]) - vol[j] as f64, j);
+        //     }
+        //     r.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        //     r.reverse();
+        //     for j in 0..lambda - vol.iter().sum::<i64>() as usize {
+        //         vol[r[j].1] += 1;
+        //     }
+
+        //     let mut nowv = vol[0];
+        //     let mut nowcol = input.own[0];
+        //     for j in 1..input.k {
+        //         let nxtv = nowv + vol[j];
+        //         let nxtcol = mix(nowv as f64, nowcol, vol[j] as f64, input.own[j]);
+        //         nowv = nxtv;
+        //         nowcol = nxtcol;
+        //     }
+
+        //     let mut error = 0.0;
+        //     for &target in targets {
+        //         error += distance(nowcol, input.target[target]);
+        //     }
+        //     if error < mi {
+        //         mi = error;
+        //         mi_vol = vol.clone();
+        //     }
+        // }
+        res
     }
 
     fn calc_targets(&mut self, input: &Input, pallet: &Pallet, start_time: Instant) -> (Vec<Vec<Vec<usize>>>, Vec<(usize, usize)>) {
@@ -491,23 +557,30 @@ impl State {
         // やっていくしかない
         // 貪欲だし今書いてたやつを初期解に使う
         // targets を焼きなましで得て、targets_rev はここで生やす
+        // ビムサ説ない？
 
         let mut sa_state = SAState::new(input, pallet, self.lambda);
+        // let time_limit = 3000 * 10 - 50;
+        let time_limit = 0;
+        let start_temp = 0.02;
+        let end_temp = 0.0001;
+        // eprintln!("{}", sa_state.get_score(input, pallet, self.lambda, &mut self.rng));
         loop {
-            if start_time.elapsed().as_millis() > 2950 {
+            if start_time.elapsed().as_millis() > time_limit {
                 break;
             }
 
+            let temp = start_temp - (start_temp - end_temp) * (start_time.elapsed().as_millis() as f64 / time_limit as f64);
             let mut new_state = sa_state.clone();
-            new_state.update(input);
+            new_state.update(input, pallet, &mut self.rng);
             let new_score = new_state.get_score(input, pallet, self.lambda, &mut self.rng);
             let old_score = sa_state.get_score(input, pallet, self.lambda, &mut self.rng);
-            if new_score < old_score {
+            let prob = (-(new_score - old_score) / temp).exp();
+            if prob > self.rng.gen_range(0.0..1.0) {
+                // eprintln!("{}", sa_state.get_score(input, pallet, self.lambda, &mut self.rng));
                 sa_state = new_state;
             }
         }
-
-        // eprintln!("{}", sa_state.get_score(input, pallet, self.lambda, &mut self.rng));
 
         (sa_state.targets, sa_state.targets_rev)
     }
