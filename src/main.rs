@@ -126,6 +126,107 @@ impl Pallet {
     }
 }
 
+#[derive(Clone, Debug)]
+struct SAState {
+    // SA の中で変わりうる要素だけ持たせる
+    targets: Vec<Vec<Vec<usize>>>,
+    targets_rev: Vec<(usize, usize)>, // target_id -> (well_id, pos_id)
+}
+
+impl SAState {
+    fn new(input: &Input, pallet: &Pallet, lambda: usize) -> SAState {
+        let mut targets = vec![vec![]; pallet.sz_v.len()];
+        let mut targets_rev = vec![(usize::MAX, usize::MAX); input.h];
+
+        // targets 初期化
+        let mut well_cnt = vec![0; pallet.sz_v.len()];
+        for i in 0..input.h {
+            if targets_rev[i] != (usize::MAX, usize::MAX) {
+                // すでに決まっているターゲットはスキップ
+                well_cnt[targets_rev[i].0] -= 1;
+                continue;
+            }
+
+            let mut v = vec![(0.0, i)];
+            for j in 1..250 {
+                if i + j >= input.h {
+                    break;
+                }
+                if targets_rev[i + j] != (usize::MAX, usize::MAX) {
+                    continue;
+                }
+                let d = distance(input.target[i], input.target[i + j]);
+                v.push((d, i + j));
+            }
+            v.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+            for j in 0..pallet.sz_v.len() {
+                if well_cnt[j] == 0 {
+                    // 空いている場所を見つける
+                    targets[j].push(vec![]);
+                    for k in 0..lambda {
+                        let idx = v[k].1;
+                        targets[j].last_mut().unwrap().push(idx);
+                        targets_rev[idx] = (j, targets[j].len() - 1);
+                    }
+                    well_cnt[j] += lambda;
+                    break;
+                }
+            }
+            well_cnt[targets_rev[i].0] -= 1;
+
+        }
+        // 初期化おわり
+        SAState {
+            targets,
+            targets_rev,
+        }
+    }
+
+    fn update(&mut self, input: &Input) {
+
+    }
+
+    fn get_score(&self, input: &Input, pallet: &Pallet, lambda: usize, rng: &mut ChaCha20Rng) -> f64 {
+        let mut res = 0.0;
+
+        let mut well_cnt = vec![0; pallet.sz_v.len()];
+        for i in 0..input.h {
+            let well_id = self.targets_rev[i].0;
+            let (well_r, well_c) = pallet.pos_v[well_id];
+            if well_cnt[well_id] == 0 {
+                //eprintln!("Add {} {} {} {}", i, well_id, well_r, well_c);
+                // ウェルに絵の具がなければ絵の具を追加
+                // 絵の具を追加
+                let mi_vol = State::get_mi_vol(
+                    lambda,
+                    &self.targets[well_id][self.targets_rev[i].1],
+                    input,
+                    rng,
+                );
+
+                let mut nowcol = [0.0; 3];
+                let mut nowvol = 0.0;
+                for j in 0..input.k {
+                    let vol = mi_vol[j];
+                    well_cnt[well_id] += vol;
+                    nowcol = mix(nowvol, nowcol, vol as f64, input.own[j]);
+                    nowvol += vol as f64;
+                }
+                for &cand in &self.targets[well_id][self.targets_rev[i].1] {
+                    res += distance(nowcol, input.target[cand]);
+                }
+            }
+
+            // i 番目を配達
+            // eprintln!("{} {} {}", i, well_r, well_c);
+            // eprintln!("{}", self.vols[self.ids[well_r][well_c]]);
+            well_cnt[well_id] -= 1;
+        }
+        
+        res
+    }
+}
+
 struct State {
     wall_v: Vec<Vec<bool>>, // n * n-1
     wall_h: Vec<Vec<bool>>, // n-1 * n
@@ -315,24 +416,24 @@ impl State {
         }
     }
 
-    fn gen_w(&mut self, k: usize) -> Vec<Vec<f64>> {
+    fn gen_w(k: usize, rng: &mut ChaCha20Rng) -> Vec<Vec<f64>> {
         let mut res = vec![];
         let alpha = vec![1.0; k];
         for i in 0..4000 {
             let dir = Dirichlet::new(&alpha).unwrap();
-            let w = dir.sample(&mut self.rng);
+            let w = dir.sample(rng);
             res.push(w);
         }
         let alpha = vec![0.3; k];
         for j in 0..2000 {
             let dir = Dirichlet::new(&alpha).unwrap();
-            let w = dir.sample(&mut self.rng);
+            let w = dir.sample(rng);
             res.push(w);
         }
         let alpha = vec![3.0; k];
         for j in 0..2000 {
             let dir = Dirichlet::new(&alpha).unwrap();
-            let w = dir.sample(&mut self.rng);
+            let w = dir.sample(rng);
             res.push(w);
         }
         res
@@ -340,12 +441,12 @@ impl State {
 
     // 乱択でやってるけど lambda が小さかったら全探索できるはず
     fn get_mi_vol(
-        &mut self,
         lambda: usize,
         targets: &Vec<usize>,
         input: &Input,
+        rng: &mut ChaCha20Rng,
     ) -> Vec<i64> {
-        let ww = self.gen_w(input.k);
+        let ww = State::gen_w(input.k, rng);
         let mut mi = f64::MAX;
         let mut mi_vol = vec![0; input.k];
         for w in &ww {
@@ -382,50 +483,36 @@ impl State {
         mi_vol
     }
 
-    fn calc_targets(&self, input: &Input, pallet: &Pallet) -> (Vec<Vec<Vec<usize>>>, Vec<(usize, usize)>) {
-        let mut targets = vec![vec![]; pallet.sz_v.len()];
-        let mut targets_rev = vec![(usize::MAX, usize::MAX); input.h];
+    fn calc_targets(&mut self, input: &Input, pallet: &Pallet, start_time: Instant) -> (Vec<Vec<Vec<usize>>>, Vec<(usize, usize)>) {
+        // ここで焼きなまし
+        // get_mi_vol と分けてるけど、使いながらでいいかも
+        // さすがにこの State は要素多いので、焼く用の state を作るといいかも
+        // 差分更新めんどくせ～～～
+        // やっていくしかない
+        // 貪欲だし今書いてたやつを初期解に使う
+        // targets を焼きなましで得て、targets_rev はここで生やす
 
-        let mut well_cnt = vec![0; pallet.sz_v.len()];
-        for i in 0..input.h {
-            if targets_rev[i] != (usize::MAX, usize::MAX) {
-                // すでに決まっているターゲットはスキップ
-                well_cnt[targets_rev[i].0] -= 1;
-                continue;
+        let mut sa_state = SAState::new(input, pallet, self.lambda);
+        loop {
+            if start_time.elapsed().as_millis() > 2950 {
+                break;
             }
 
-            let mut v = vec![(0.0, i)];
-            for j in 1..250 {
-                if i + j >= input.h {
-                    break;
-                }
-                if targets_rev[i + j] != (usize::MAX, usize::MAX) {
-                    continue;
-                }
-                let d = distance(input.target[i], input.target[i + j]);
-                v.push((d, i + j));
+            let mut new_state = sa_state.clone();
+            new_state.update(input);
+            let new_score = new_state.get_score(input, pallet, self.lambda, &mut self.rng);
+            let old_score = sa_state.get_score(input, pallet, self.lambda, &mut self.rng);
+            if new_score < old_score {
+                sa_state = new_state;
             }
-            v.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-            for j in 0..pallet.sz_v.len() {
-                if well_cnt[j] == 0 {
-                    // 空いている場所を見つける
-                    targets[j].push(vec![]);
-                    for k in 0..self.lambda {
-                        let idx = v[k].1;
-                        targets[j].last_mut().unwrap().push(idx);
-                        targets_rev[idx] = (j, targets[j].len() - 1);
-                    }
-                    well_cnt[j] += self.lambda;
-                    break;
-                }
-            }
-            well_cnt[targets_rev[i].0] -= 1;
-
         }
-        (targets, targets_rev)
+
+        // eprintln!("{}", sa_state.get_score(input, pallet, self.lambda, &mut self.rng));
+
+        (sa_state.targets, sa_state.targets_rev)
     }
 
-    fn solve(&mut self, input: &Input, pallet: &Pallet) -> Vec<Action> {
+    fn solve(&mut self, input: &Input, pallet: &Pallet, start_time: Instant) -> Vec<Action> {
         // クラスタを確定させるところとアクションを実行するところは分けられるはず
         // クラスタ確定 -> ターゲットごとに追加と配達を実行
 
@@ -434,10 +521,10 @@ impl State {
         // sz に対して pos を一つ割り当てられればよい？
         // id にたいする残り容量もわかるとよい
         // target_id -> well_id -> pos の順に引ければいい
-        // posごとに、ターゲットのリストをサイズごとに持つ (Vec<Vec<usize>>)
+        // posごとに、ターゲットのリストをサイズごとに持つ
 
         self.lambda = 5;
-        let (targets, targets_rev) = self.calc_targets(input, pallet);
+        let (targets, targets_rev) = self.calc_targets(input, pallet, start_time);
         let mut actions = vec![];
         let mut well_cnt = vec![0; pallet.sz_v.len()];
 
@@ -446,11 +533,13 @@ impl State {
             let (well_r, well_c) = pallet.pos_v[well_id];
             if well_cnt[well_id] == 0 {
                 //eprintln!("Add {} {} {} {}", i, well_id, well_r, well_c);
+                // ウェルに絵の具がなければ絵の具を追加
                 // 絵の具を追加
-                let mi_vol = self.get_mi_vol(
+                let mi_vol = State::get_mi_vol(
                     self.lambda,
                     &targets[well_id][targets_rev[i].1],
                     input,
+                    &mut self.rng,
                 );
 
                 for j in 0..input.k {
@@ -462,7 +551,7 @@ impl State {
                             k: j,
                         };
                         actions.push(add_action.clone());
-                        // self.apply(add_action, input);
+                        self.apply(add_action, input);
                         well_cnt[well_id] += 1;
                     }
                 }
@@ -473,7 +562,7 @@ impl State {
             // eprintln!("{}", self.vols[self.ids[well_r][well_c]]);
             let deliver_action = Action::Deliver { i: well_r, j: well_c };
             actions.push(deliver_action.clone());
-            // self.apply(deliver_action, input);
+            self.apply(deliver_action, input);
             well_cnt[well_id] -= 1;
         }
 
@@ -491,6 +580,8 @@ fn main() {
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
 
+    let start_time = Instant::now();
+
     let input = input();
     let n = input.n;
     let lambda = 5;
@@ -498,9 +589,11 @@ fn main() {
     let (pallet, wall_v, wall_h) = Pallet::new(&input);
 
     let mut state = State::new(&input, &wall_v, &wall_h, lambda);
-    let actions = state.solve(&input, &pallet);
+    let actions = state.solve(&input, &pallet, start_time);
     output(&wall_v, &wall_h, &actions);
 }
+
+use std::time::Instant;
 
 use proconio::marker::{Chars, Isize1, Usize1};
 use proconio::{input, source::line::LineSource};
