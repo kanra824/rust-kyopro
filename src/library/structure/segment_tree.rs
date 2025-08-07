@@ -1,3 +1,4 @@
+#[derive(Clone, Debug)]
 pub struct SegmentTree<T, F, G>
 {
     n: usize,
