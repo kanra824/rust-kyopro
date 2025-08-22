@@ -1,5 +1,9 @@
 #![allow(unused)]
 
+fn solve(reader: &mut Reader) {
+
+}
+
 fn main() {
     // // AOJ, codeforces, etc...
     let mut s = String::new();
@@ -9,6 +13,10 @@ fn main() {
     // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
+    
+    loop {
+        solve(&mut reader);
+    }
 }
 
 use std::cmp::{max, min};

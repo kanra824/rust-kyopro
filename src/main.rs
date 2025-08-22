@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+mod library;
+
 fn main() {
     // // AOJ, codeforces, etc...
     // let mut s = String::new();
