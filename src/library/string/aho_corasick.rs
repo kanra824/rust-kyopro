@@ -5,6 +5,7 @@ use std::collections::{HashMap, VecDeque};
 struct State {
     id: usize,
     next: HashMap<usize, usize>,
+    is_pattern: bool,
 }
 
 impl State {
@@ -12,6 +13,7 @@ impl State {
         State {
             id,
             next: HashMap::new(),
+            is_pattern: false,
         }
     }
 
@@ -22,18 +24,19 @@ impl State {
 
 pub struct AhoCorasick {
     node: Vec<State>,
-    output: Vec<Vec<Vec<usize>>>,
     failure: Vec<usize>,
 }
 
 impl AhoCorasick {
-    pub fn new(patterns: Vec<Vec<usize>>) -> Self {
+    pub fn new(patterns: &Vec<Vec<usize>>) -> Self {
         let node = vec![State::new(0)];
-        AhoCorasick {
+        let mut ahocora = AhoCorasick {
             node,
-            output: vec![vec![]; 1],
             failure: vec![],
-        }
+        };
+        ahocora.make_goto(patterns);
+        ahocora.make_failure();
+        ahocora
     }
 
     fn make_goto(&mut self, patterns: &Vec<Vec<usize>>) {
@@ -45,13 +48,10 @@ impl AhoCorasick {
                     let mut new_node = State::new(self.node.len());
                     self.node[cur].next.insert(x, new_node.id);
                     self.node.push(new_node);
-                    self.output.push(vec![]);
                 }
                 cur = self.node[cur].next[&x];
             }
-
-            // output の処理
-            // self.output[cur].push(pattern.clone())
+            self.node[cur].is_pattern = true;
         }
     }
 
@@ -73,7 +73,6 @@ impl AhoCorasick {
                         let res = self.goto(f, x);
                         if let Some(val) = res {
                             failure[nxt] = val;
-                            // こわれてる self.output[nxt].extend(self.output[failure[nxt]].clone().iter());
                         }
                     }
                 }
@@ -103,5 +102,4 @@ impl AhoCorasick {
             now = self.goto(now, query[i]).unwrap();
         }
     }
-
 }
