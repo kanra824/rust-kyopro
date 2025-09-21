@@ -5,4 +5,5 @@ pub mod pow;
 pub mod sieve;
 pub mod fft;
 pub mod ntt;
+pub mod min_of_mod_of_linear;
 pub mod moebius;
