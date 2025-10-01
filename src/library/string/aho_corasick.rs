@@ -5,7 +5,7 @@ use std::collections::{HashMap, VecDeque};
 struct State {
     id: usize,
     next: HashMap<usize, usize>,
-    is_pattern: bool,
+    pattern: Option<usize>,
 }
 
 impl State {
@@ -13,7 +13,7 @@ impl State {
         State {
             id,
             next: HashMap::new(),
-            is_pattern: false,
+            pattern: None,
         }
     }
 
@@ -42,9 +42,9 @@ impl AhoCorasick {
 
     fn make_goto(&mut self, patterns: &Vec<Vec<usize>>) {
         // Trie 木をつくる
-        for pattern in patterns {
+        for i in 0..patterns.len() {
             let mut cur = self.node[0].id;
-            for &x in pattern {
+            for &x in &patterns[i] {
                 if !self.node[cur].has_key(x) {
                     let mut new_node = State::new(self.node.len());
                     self.node[cur].next.insert(x, new_node.id);
@@ -52,7 +52,7 @@ impl AhoCorasick {
                 }
                 cur = self.node[cur].next[&x];
             }
-            self.node[cur].is_pattern = true;
+            self.node[cur].pattern = Some(i);
         }
     }
 
@@ -94,7 +94,7 @@ impl AhoCorasick {
         }
     }
 
-    fn query(&self, query: Vec<usize>) {
+    pub fn query(&self, query: &Vec<usize>) -> std::collections::BTreeSet<usize> {
         let mut now = 0;
         let mut st = std::collections::BTreeSet::new();
         for i in 0..query.len() {
@@ -102,6 +102,10 @@ impl AhoCorasick {
                 now = self.failure[now];
             }
             now = self.goto(now, query[i]).unwrap();
+            if let Some(val) = self.node[now].pattern {
+                st.insert(val);
+            }
         }
+        st
     }
 }
