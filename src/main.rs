@@ -1,5 +1,8 @@
 #![allow(unused)]
 
+mod library;
+mod tests;
+
 fn main() {
     // // AOJ, codeforces, etc...
     // let mut s = String::new();
@@ -11,7 +14,28 @@ fn main() {
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
         // from &mut source,
+        n: usize,
+        s: Chars,
     }
+
+    let mut dp = vec![0; 1<<n];
+    dp[0] = 1;
+    for i in 0..1<<n {
+        let mut c = '#';
+        for j in 0..n {
+            if i>>j&1 == 1 {
+                if s[j] == c {
+                    continue;
+                }
+                c = s[j];
+                let prev = i ^ (1<<j);
+                dp[i] += dp[prev];
+                dp[i] %= MOD998;
+            }
+        }
+    }
+
+    pr(dp[(1<<n)-1]);
 }
 
 use proconio::marker::{Chars, Isize1, Usize1};

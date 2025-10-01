@@ -22,6 +22,7 @@ impl State {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct AhoCorasick {
     node: Vec<State>,
     failure: Vec<usize>,
@@ -95,6 +96,7 @@ impl AhoCorasick {
 
     fn query(&self, query: Vec<usize>) {
         let mut now = 0;
+        let mut st = std::collections::BTreeSet::new();
         for i in 0..query.len() {
             while self.goto(now, query[i]).is_none() {
                 now = self.failure[now];
