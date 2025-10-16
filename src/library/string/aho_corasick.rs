@@ -82,7 +82,7 @@ impl AhoCorasick {
         self.failure = failure;
     }
 
-    fn goto(&self, s: usize, x: usize) -> Option<usize> {
+    pub fn goto(&self, s: usize, x: usize) -> Option<usize> {
         if self.node[s].next.contains_key(&x) {
             Some(self.node[s].next[&x])
         } else {
@@ -94,14 +94,25 @@ impl AhoCorasick {
         }
     }
 
-    pub fn query(&self, query: &Vec<usize>) -> std::collections::BTreeSet<usize> {
+    pub fn transition(&mut self, s: usize, x: usize) -> usize {
+        let mut now = s;
+        let mut from = vec![];
+        while let None = self.goto(now, x) {
+            from.push(now);
+            now = self.failure[now];
+        }
+        let to = self.goto(now, x).unwrap();
+        for e in from {
+            self.node[e].next.insert(x, to);
+        }
+        to
+    }
+
+    pub fn query(&mut self, query: &Vec<usize>) -> std::collections::BTreeSet<usize> {
         let mut now = 0;
         let mut st = std::collections::BTreeSet::new();
         for i in 0..query.len() {
-            while self.goto(now, query[i]).is_none() {
-                now = self.failure[now];
-            }
-            now = self.goto(now, query[i]).unwrap();
+            now = self.transition(now, query[i]);
             if let Some(val) = self.node[now].pattern {
                 st.insert(val);
             }

@@ -1,7 +1,8 @@
-print("1 958729478")
-print("500")
+from random import randint
 
-for i in range(500):
-    print("10 ", end="")
+n = 60
+m = 1000000000
+print(n, m)
+for i in range(n):
+    print(randint(0, m), end=" ")
 print()
-

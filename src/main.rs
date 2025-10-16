@@ -1,5 +1,19 @@
 #![allow(unused)]
 
+fn solve() {
+    input! {
+        n: i64,
+        k: i64,
+    }
+
+    let mut val = k;
+    if n > k {
+        val = k + n;
+    }
+
+    
+}
+
 fn main() {
     // // AOJ, codeforces, etc...
     // let mut s = String::new();
@@ -11,6 +25,11 @@ fn main() {
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
         // from &mut source,
+        t: usize,
+    }
+
+    for _ in 0..t {
+        solve();
     }
 }
 

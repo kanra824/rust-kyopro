@@ -24,7 +24,7 @@ where
         for i in 0..n {
             v_[n_ + i] = v[i];
         }
-        for i in (0..=n_ - 1).rev() {
+        for i in (1..=n_ - 1).rev() {
             v_[i] = f(v_[i * 2], v_[i * 2 + 1]);
         }
 
