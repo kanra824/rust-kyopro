@@ -1,17 +1,25 @@
 #![allow(unused)]
 
-fn solve() {
-    input! {
-        n: i64,
-        k: i64,
+pub fn manacher<T>(s: &Vec<T>) -> Vec<usize>
+where T: PartialEq + Eq,
+{
+    let mut i = 0;
+    let mut j = 0;
+    let mut res = vec![0; s.len()];
+    while i < s.len() {
+        while i >= j && i + j < s.len() && s[i-j] == s[i+j] {
+            j += 1;
+        }
+        res[i] = j;
+        let mut k = 1;
+        while i >= k && k + res[i-k] < j {
+            res[i+k] = res[i-k];
+            k += 1;
+        }
+        i += k;
+        j -= k;
     }
-
-    let mut val = k;
-    if n > k {
-        val = k + n;
-    }
-
-    
+    res
 }
 
 fn main() {
@@ -25,11 +33,29 @@ fn main() {
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
         // from &mut source,
-        t: usize,
+        n: usize,
+        q: usize,
+        s: Chars,
     }
 
-    for _ in 0..t {
-        solve();
+    let res = manacher(&s);
+
+    let mut st = SegmentTree::new(
+        n,
+        res,
+        |a, b| a.max(b),
+        |a, b| b,
+        0
+    );
+
+    for i in 0..q {
+        input! {
+            l: Usize1,
+            r: usize,
+        }
+
+        let val = st.query(l, r);
+        pr(val * 2 - 1);
     }
 }
 
@@ -172,3 +198,68 @@ fn char_to_i64(c: char) -> i64 {
     c as u32 as i64 - '0' as u32 as i64
 }
 
+#[derive(Clone, Debug)]
+pub struct SegmentTree<T, F, G>
+{
+    n: usize,
+    pub v: Vec<T>,
+    f: F,
+    g: G,
+    zero: T,
+}
+
+impl<T, F, G> SegmentTree<T, F, G>
+where
+    T: Clone + Copy,
+    F: Fn(T, T) -> T,
+    G: Fn(T, T) -> T,
+{
+    pub fn new(n: usize, v: Vec<T>, f: F, g: G, zero: T) -> Self {
+        let mut n_ = 1;
+        while n_ < n {
+            n_ *= 2;
+        }
+
+        let mut v_ = vec![zero; 2 * n_];
+        for i in 0..n {
+            v_[n_ + i] = v[i];
+        }
+        for i in (1..=n_ - 1).rev() {
+            v_[i] = f(v_[i * 2], v_[i * 2 + 1]);
+        }
+
+        SegmentTree {
+            n: n_,
+            v: v_,
+            f,
+            g,
+            zero,
+        }
+    }
+
+    pub fn update(&mut self, i: usize, x: T) {
+        self.v[self.n + i] = (self.g)(self.v[self.n + i], x);
+        let mut now = (self.n + i) / 2;
+        while now > 0 {
+            self.v[now] = (self.f)(self.v[now * 2], self.v[now * 2 + 1]);
+            now /= 2;
+        }
+    }
+
+    fn query_(&self, l: usize, r: usize, k: usize, a: usize, b: usize) -> T {
+        if r <= a || b <= l {
+            return self.zero;
+        }
+        if a <= l && r <= b {
+            return self.v[k];
+        }
+
+        let val1 = self.query_(l, (l + r) / 2, 2 * k, a, b);
+        let val2 = self.query_((l + r) / 2, r, 2 * k + 1, a, b);
+        (self.f)(val1, val2)
+    }
+
+    pub fn query(&self, a: usize, b: usize) -> T {
+        self.query_(0, self.n, 1, a, b)
+    }
+}
