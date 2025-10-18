@@ -1,66 +1,41 @@
 #![allow(unused)]
 
-pub fn manacher<T>(s: &Vec<T>) -> Vec<usize>
-where T: PartialEq + Eq,
-{
-    let mut i = 0;
-    let mut j = 0;
-    let mut res = vec![0; s.len()];
-    while i < s.len() {
-        while i >= j && i + j < s.len() && s[i-j] == s[i+j] {
-            j += 1;
-        }
-        res[i] = j;
-        let mut k = 1;
-        while i >= k && k + res[i-k] < j {
-            res[i+k] = res[i-k];
-            k += 1;
-        }
-        i += k;
-        j -= k;
-    }
-    res
-}
-
 fn main() {
     // // AOJ, codeforces, etc...
-    // let mut s = String::new();
-    // let stdin = stdin();
-    // let mut reader = Reader::new(&mut s, stdin);
+    let mut s = String::new();
+    let stdin = stdin();
+    let mut reader = Reader::new(&mut s, stdin);
 
     // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
-    input! {
-        // from &mut source,
-        n: usize,
-        q: usize,
-        s: Chars,
-    }
-
-    let res = manacher(&s);
-
-    let mut st = SegmentTree::new(
-        n,
-        res,
-        |a, b| a.max(b),
-        |a, b| b,
-        0
-    );
-
-    for i in 0..q {
-        input! {
-            l: Usize1,
-            r: usize,
+    let n: usize = reader.r();
+    let mut g = vec![vec![]; n];
+    for i in 0..n {
+        let k: usize = reader.r();
+        for j in 0..k {
+            let mut child: usize = reader.r();
+            g[i].push(child);
+            g[child].push(i);
         }
-
-        let val = st.query(l, r);
-        pr(val * 2 - 1);
     }
+
+    let mut hld = HeavyLightDecomposition::new(n, g);
+    let res = hld.hld(0);
+    // pd(res);
+
+
+    let q: usize = reader.r();
+    for i in 0..q {
+        let mut u: usize = reader.r();
+        let mut v: usize = reader.r();
+        // println!("{} {}", u, v);
+        // pd(hld.query(u, v));
+        pr(hld.lca(u, v));
+    }
+    
 }
 
-use proconio::marker::{Chars, Isize1, Usize1};
-use proconio::{input, source::line::LineSource};
 use std::cmp::{max, min};
 use std::collections::*;
 use std::io::{stdin, stdout, BufReader, Read, Stdin, Write};
@@ -198,68 +173,125 @@ fn char_to_i64(c: char) -> i64 {
     c as u32 as i64 - '0' as u32 as i64
 }
 
-#[derive(Clone, Debug)]
-pub struct SegmentTree<T, F, G>
-{
+// https://qiita.com/recuraki/items/cb888afdc107b64a4a6e
+// verify: https://atcoder.jp/contests/abc294/submissions/70278032
+
+pub struct HeavyLightDecomposition {
     n: usize,
-    pub v: Vec<T>,
-    f: F,
-    g: G,
-    zero: T,
+    g: Vec<Vec<usize>>,
+    prev: Vec<usize>,
+    depth: Vec<i64>,
+    child_cnt: Vec<i64>,
+    node_to_hld: Vec<usize>,
+    hld_to_node: Vec<usize>,
+    shallow: Vec<usize>,
 }
 
-impl<T, F, G> SegmentTree<T, F, G>
-where
-    T: Clone + Copy,
-    F: Fn(T, T) -> T,
-    G: Fn(T, T) -> T,
-{
-    pub fn new(n: usize, v: Vec<T>, f: F, g: G, zero: T) -> Self {
-        let mut n_ = 1;
-        while n_ < n {
-            n_ *= 2;
-        }
-
-        let mut v_ = vec![zero; 2 * n_];
-        for i in 0..n {
-            v_[n_ + i] = v[i];
-        }
-        for i in (1..=n_ - 1).rev() {
-            v_[i] = f(v_[i * 2], v_[i * 2 + 1]);
-        }
-
-        SegmentTree {
-            n: n_,
-            v: v_,
-            f,
+impl HeavyLightDecomposition {
+    pub fn new(n: usize, g: Vec<Vec<usize>>) -> Self {
+        HeavyLightDecomposition {
+            n,
             g,
-            zero,
+            prev: vec![usize::MAX; n],
+            depth: vec![i64::MAX; n],
+            child_cnt: vec![i64::MAX; n],
+            node_to_hld: vec![usize::MAX; n],
+            hld_to_node: vec![],
+            shallow: vec![usize::MAX; n],
         }
     }
 
-    pub fn update(&mut self, i: usize, x: T) {
-        self.v[self.n + i] = (self.g)(self.v[self.n + i], x);
-        let mut now = (self.n + i) / 2;
-        while now > 0 {
-            self.v[now] = (self.f)(self.v[now * 2], self.v[now * 2 + 1]);
-            now /= 2;
+    pub fn hld(&mut self, root: usize) -> Vec<usize> {
+        self.dfs(root, usize::MAX, 0);
+        self.hld_rec(root, root);
+        self.node_to_hld.clone()
+    }
+
+    pub fn lca(&self, mut u: usize, mut v: usize) -> usize {
+        while self.shallow[u] != self.shallow[v] {
+            // 浅いほうを u
+            if self.depth[self.shallow[u]] > self.depth[self.shallow[v]] {
+                std::mem::swap(&mut u, &mut v);
+            }
+
+            // v は shallow の前
+            v = self.prev[self.shallow[v]];
+        }
+        if self.node_to_hld[u] < self.node_to_hld[v] {
+            u
+        } else {
+            v
         }
     }
 
-    fn query_(&self, l: usize, r: usize, k: usize, a: usize, b: usize) -> T {
-        if r <= a || b <= l {
-            return self.zero;
-        }
-        if a <= l && r <= b {
-            return self.v[k];
-        }
+    pub fn query(&self, mut u: usize, mut v: usize) -> Vec<(usize, usize)> {
+        // 同じ列に含まれる閉区間の列
+        // 同じ列の中では (浅いほう、深いほう) の順で返す
 
-        let val1 = self.query_(l, (l + r) / 2, 2 * k, a, b);
-        let val2 = self.query_((l + r) / 2, r, 2 * k + 1, a, b);
-        (self.f)(val1, val2)
+        let mut res = vec![];
+        while self.shallow[u] != self.shallow[v] {
+            // 浅いほうを u
+            if self.depth[self.shallow[u]] > self.depth[self.shallow[v]] {
+                std::mem::swap(&mut u, &mut v);
+            }
+
+            // 深いほうを push
+            res.push((self.node_to_hld[self.shallow[v]], self.node_to_hld[v]));
+            v = self.prev[self.shallow[v]];
+        }
+        let mut val = (self.node_to_hld[u], self.node_to_hld[v]);
+        if val.0 > val.1 {
+            val = (val.1, val.0);
+        }
+        res.push(val);
+        res
     }
 
-    pub fn query(&self, a: usize, b: usize) -> T {
-        self.query_(0, self.n, 1, a, b)
+    fn dfs(&mut self, now: usize, prev: usize, nowd: i64) {
+        self.prev[now] = prev;
+        self.depth[now] = nowd;
+        self.child_cnt[now] = 1;
+        for nxt in self.g[now].clone() {
+            if nxt == prev {
+                continue;
+            }
+            self.dfs(nxt, now, nowd + 1);
+            self.child_cnt[now] += self.child_cnt[nxt];
+        }
+    }
+
+    fn hld_rec(&mut self, now: usize, top: usize) {
+        self.node_to_hld[now] = self.hld_to_node.len();
+        self.hld_to_node.push(now);
+        self.shallow[now] = top;
+        if self.child_cnt[now] == 1 {
+            return;
+        }
+
+        let mut ma = 0;
+        let mut maidx = usize::MAX;
+        for i in 0..self.g[now].len() {
+            let nxt = self.g[now][i];
+            if nxt == self.prev[now] {
+                continue;
+            }
+            if self.child_cnt[nxt] > ma {
+                ma = self.child_cnt[nxt];
+                maidx = nxt;
+            }
+        }
+
+        self.hld_rec(maidx, top);
+
+        for i in 0..self.g[now].len() {
+            let nxt = self.g[now][i];
+            if nxt == self.prev[now] {
+                continue;
+            }
+            if nxt == maidx {
+                continue;
+            }
+            self.hld_rec(nxt, nxt);
+        }
     }
 }
