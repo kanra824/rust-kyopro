@@ -2,4 +2,4 @@
 # cat main.rs | xsel --clipboard --input
 
 # WSL
-cat main.rs | iconv -t sjis | clip.exe
+cat $1 | iconv -t sjis | clip.exe
