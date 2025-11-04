@@ -86,6 +86,7 @@ impl<'a> Reader<'a> {
         }
     }
 
+    // read a token
     fn r<T: FromStr>(&mut self) -> T {
         let str = self.tokens[self.idx].pop_front().unwrap();
         let res = str.parse().ok().unwrap();
@@ -95,6 +96,7 @@ impl<'a> Reader<'a> {
         res
     }
 
+    // read vec
     fn rv<T: FromStr>(&mut self) -> Vec<T> {
         let deque = &mut self.tokens[self.idx];
         let mut res = vec![];
@@ -106,6 +108,7 @@ impl<'a> Reader<'a> {
         res
     }
 
+    // read n lines
     fn rl<T: FromStr>(&mut self, n: usize) -> Vec<T> {
         let mut res = vec![];
         let len = self.tokens.len();
@@ -119,6 +122,7 @@ impl<'a> Reader<'a> {
         res
     }
 
+    // read string as chars
     fn as_chars(&mut self) -> Vec<char> {
         let str = self.tokens[self.idx].pop_front().unwrap();
         if self.tokens[self.idx].is_empty() {
@@ -133,7 +137,7 @@ impl<'a> Reader<'a> {
 }
 
 // グリッドの範囲を見てすすめるマスを列挙(壁がある場合は呼び出し側でチェック)
-fn adj_pos(w: usize, h: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
+fn adj_pos(h: usize, w: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
     let mut res = vec![];
     let dir = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
     for (dr, dc) in dir {

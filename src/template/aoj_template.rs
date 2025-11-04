@@ -136,7 +136,7 @@ impl<'a> Reader<'a> {
 }
 
 // グリッドの範囲を見てすすめるマスを列挙(壁がある場合は呼び出し側でチェック)
-fn adj_pos(w: usize, h: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
+fn adj_pos(h: usize, w: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
     let mut res = vec![];
     let dir = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
     for (dr, dc) in dir {
