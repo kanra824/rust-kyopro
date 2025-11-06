@@ -3,6 +3,7 @@ pub type Cost = i64;
 pub struct Graph {
     pub n: usize,
     pub g: Vec<Vec<(usize, Cost)>>,
+    pub edges: Vec<(usize, usize, Cost)>,
 }
 
 impl Graph {
@@ -10,41 +11,40 @@ impl Graph {
         Graph {
             n,
             g: vec![Vec::new(); n],
+            edges: vec![],
         }
     }
 
-    pub fn from_vec(g: Vec<Vec<(usize, Cost)>>) -> Self {
-        Graph {
-            n: g.len(),
-            g
+    pub fn from_edges(n: usize, edges: Vec<(usize, usize, Cost)>) -> Self {
+        let mut graph = Graph::new(n);
+        for (u, v, c) in edges {
+            graph.add_edge(u, v, c);
         }
+        graph
     }
 
-    pub fn from_unweighted_vec(g_in: Vec<Vec<usize>>) -> Self {
-        let n = g_in.len();
-        let mut g = vec![vec![]; n];
-        for i in 0..n {
-            for &j in &g_in[i] {
-                g[i].push((g_in[i][j], 1));
-            }
+    pub fn from_unweighted_edges(n: usize, edges: Vec<(usize, usize)>) -> Self {
+        let mut graph = Graph::new(n);
+        for (u, v) in edges {
+            graph.add_edge(u, v, 1);
         }
-        Graph {
-            n,
-            g
-        }
+        graph
     }
 
     pub fn add_edge(&mut self, a: usize, b: usize, c: Cost) {
-        self.g.get_mut(a).unwrap().push((b, c))
+        self.g.get_mut(a).unwrap().push((b, c));
+        self.edges.push((a, b, c));
     }
 
-    pub fn edges(&mut self) -> Vec<(usize, usize, Cost)> {
-        let mut res = vec![];
-        for i in 0..self.n {
-            for &(j, cost) in self.g[i].iter() {
-                res.push((i, j, cost));
-            }
+    pub fn edges(&self) -> Vec<(usize, usize, Cost)> {
+        self.edges.clone()
+    }
+
+    pub fn rev(&self) -> Self {
+        let mut revg = Graph::new(self.n);
+        for &(u, v, c) in &self.edges {
+            revg.add_edge(v, u, c);
         }
-        res
+        revg
     }
 }

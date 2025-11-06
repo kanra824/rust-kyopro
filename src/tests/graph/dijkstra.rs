@@ -2,7 +2,7 @@ use crate::library::graph::graph::*;
 use crate::library::graph::dijkstra::*;
 
 #[test]
-fn dijkstra_test() {
+fn test_dijkstra() {
     let mut graph = Graph::new(5);
     graph.add_edge(0, 1, 1);
     graph.add_edge(1, 2, 2);

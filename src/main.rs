@@ -11,10 +11,27 @@ fn main() {
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
         // from &mut source,
+        n: usize,
+        m: usize,
+        edges: [(usize, usize); m],
     }
+
+    let mut g = Graph::from_unweighted_edges(n, edges);
+    let mut scc = g.strongly_connected_components();
+
+    pr(scc.len());
+    for v in scc {
+        print!("{}", v.len());
+        for val in v {
+            print!(" {}", val);
+        }
+        println!();
+    }
+    
 }
 
 mod library;
+mod tests;
 
 use proconio::marker::{Chars, Isize1, Usize1};
 use proconio::{input, source::line::LineSource};
@@ -159,3 +176,129 @@ fn char_to_i64(c: char) -> i64 {
     c as u32 as i64 - '0' as u32 as i64
 }
 
+pub type Cost = i64;
+
+pub struct Graph {
+    pub n: usize,
+    pub g: Vec<Vec<(usize, Cost)>>,
+    pub edges: Vec<(usize, usize, Cost)>,
+}
+
+impl Graph {
+    pub fn new(n: usize) -> Self {
+        Graph {
+            n,
+            g: vec![Vec::new(); n],
+            edges: vec![],
+        }
+    }
+
+    pub fn from_edges(n: usize, edges: Vec<(usize, usize, Cost)>) -> Self {
+        let mut graph = Graph::new(n);
+        for (u, v, c) in edges {
+            graph.add_edge(u, v, c);
+        }
+        graph
+    }
+
+    pub fn from_unweighted_edges(n: usize, edges: Vec<(usize, usize)>) -> Self {
+        let mut graph = Graph::new(n);
+        for (u, v) in edges {
+            graph.add_edge(u, v, 1);
+        }
+        graph
+    }
+
+    pub fn add_edge(&mut self, a: usize, b: usize, c: Cost) {
+        self.g.get_mut(a).unwrap().push((b, c));
+        self.edges.push((a, b, c));
+    }
+
+    pub fn edges(&self) -> Vec<(usize, usize, Cost)> {
+        self.edges.clone()
+    }
+
+    pub fn rev(&self) -> Self {
+        let mut revg = Graph::new(self.n);
+        for &(u, v, c) in &self.edges {
+            revg.add_edge(v, u, c);
+        }
+        revg
+    }
+}
+
+pub trait StronglyConnectedComponents {
+    fn strongly_connected_components(&self) -> Vec<Vec<usize>>;
+}
+
+impl StronglyConnectedComponents for Graph {
+    // 強連結成分の Vec をトポロジカルソート順に格納
+    fn strongly_connected_components(&self) -> Vec<Vec<usize>> {
+        let mut sel = vec![false; self.n];
+        let mut num = vec![usize::MAX; self.n];
+        let mut id = 0;
+        for i in 0..self.n {
+            if !sel[i] {
+                dfs_scc1(i, usize::MAX, &self.g, &mut sel, &mut num, &mut id);
+            }
+        }
+
+        let mut v = vec![];
+        for i in 0..self.n {
+            v.push((num[i], i));
+        }
+        v.sort();
+        v.reverse();
+
+        let mut revg = self.rev();
+        let mut res = vec![];
+        sel = vec![false; self.n];
+        for i in 0..self.n {
+            let idx = v[i].1;
+            if sel[idx] {
+                continue;
+            }
+            let mut resv = vec![];
+            dfs_scc2(idx, usize::MAX, &revg.g, &mut sel, &mut resv);
+            res.push(resv);
+        }
+
+        res
+    }
+
+}
+
+fn dfs_scc1(now: usize, prev: usize, g: &Vec<Vec<(usize, Cost)>>, sel: &mut Vec<bool>, num: &mut Vec<usize>, id: &mut usize) {
+    sel[now] = true;
+
+    for &(nxt, _) in &g[now] {
+        if nxt == prev {
+            continue;
+        }
+        if sel[nxt] {
+            continue;
+        }
+
+        dfs_scc1(nxt, now, g, sel, num, id);
+    }
+
+    num[now] = *id;
+    *id += 1;
+}
+
+fn dfs_scc2(now: usize, prev: usize, g: &Vec<Vec<(usize, Cost)>>, sel: &mut Vec<bool>, res: &mut Vec<usize>) {
+    sel[now] = true;
+    res.push(now);
+
+    for &(nxt, _) in &g[now] {
+        if nxt == prev {
+            continue;
+        }
+
+        if sel[nxt] {
+            continue;
+        }
+
+        dfs_scc2(nxt, now, g, sel, res);
+    }
+}
