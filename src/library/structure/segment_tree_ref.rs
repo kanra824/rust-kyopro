@@ -29,7 +29,7 @@ where
             v_[i] = f(&v_[i * 2], &v_[i * 2 + 1]);
         }
 
-        SegmentTree {
+        SegmentTreeRef {
             n: n_,
             v: v_,
             f,
