@@ -1,4 +1,5 @@
 use super::graph::*;
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 pub struct LowLinkData {
@@ -29,14 +30,14 @@ impl LowLink for Graph {
 
         for i in 0..n {
             if !visited[i] {
-                build_lowlink(i, usize::MAX, &self, &mut visited, &mut order, &mut lowlink);
+                build_lowlink(i, usize::MAX, 0, &self, &mut visited, &mut order, &mut lowlink);
             }
         }
         lowlink
     }
 }
 
-fn build_lowlink(now: usize, prev: usize, graph: &Graph, visited: &mut Vec<bool>, order: &mut usize, lowlink: &mut LowLinkData) {
+fn build_lowlink(now: usize, prev: usize, prev_cnt: usize, graph: &Graph, visited: &mut Vec<bool>, order: &mut usize, lowlink: &mut LowLinkData) {
     if visited[now] {
         return;
     }
@@ -46,16 +47,23 @@ fn build_lowlink(now: usize, prev: usize, graph: &Graph, visited: &mut Vec<bool>
     *order += 1;
     let mut is_articulation = false;
     let mut cnt = 0;
+
+    let mut prev_cnt_mp = BTreeMap::new();
+    for &(nxt, _) in &graph.g[now] {
+        let val = prev_cnt_mp.entry(nxt).or_insert(0);
+        *val += 1;
+    }
+
     for &(nxt, _) in &graph.g[now] {
         if !visited[nxt] {
             cnt += 1;
-            build_lowlink(nxt, now, graph, visited, order, lowlink);
+            build_lowlink(nxt, now, prev_cnt_mp[&nxt], graph, visited, order, lowlink);
             lowlink.low[now] = lowlink.low[now].min(lowlink.low[nxt]);
             is_articulation = is_articulation || prev != usize::MAX && lowlink.low[nxt] >= lowlink.ord[now];
             if lowlink.ord[now] < lowlink.low[nxt] {
                 lowlink.bridges.push((now.min(nxt), now.max(nxt)));
             }
-        } else if nxt != prev {
+        } else if prev_cnt >= 2 || nxt != prev {
             lowlink.low[now] = lowlink.low[now].min(lowlink.ord[nxt]);
         }
     }
@@ -118,3 +126,57 @@ fn build_biconnected_components(now: usize, prev: usize, graph: &Graph, lowlink:
     }
 }
 
+#[derive(Clone, Debug)]
+struct TwoEdgeConnectedComponentsData {
+    comp: Vec<usize>, // 各頂点が属する二重辺連結成分の頂点番号
+    tree: Graph, // 縮約後の頂点からなる森
+    group: Vec<Vec<usize>>, // 各二重辺連結成分について、それに属する頂点
+}
+
+trait TwoEdgeConnectedComponents: LowLink {
+    fn two_edge_connected_components(&self, lowlink: &LowLinkData) -> TwoEdgeConnectedComponentsData;
+}
+
+impl TwoEdgeConnectedComponents for Graph {
+    fn two_edge_connected_components(&self, lowlink: &LowLinkData) -> TwoEdgeConnectedComponentsData {
+        // verify: https://judge.yosupo.jp/submission/326904
+        let n = self.n;
+        let mut comp = vec![usize::MAX; n];
+        let mut k = 0;
+        let mut tec = TwoEdgeConnectedComponentsData {
+            comp,
+            tree: Graph::new(1),
+            group: vec![],
+        };
+        for i in 0..n {
+            if tec.comp[i] == usize::MAX {
+                build_two_edge_connected_components(i, usize::MAX, &mut k, &self, lowlink, &mut tec);
+            }
+        }
+        tec.group = vec![vec![]; k];
+        for i in 0..n {
+            tec.group[tec.comp[i]].push(i);
+        }
+        tec.tree = Graph::new(k);
+        for &(u, v) in &lowlink.bridges {
+            tec.tree.add_edge(tec.comp[u], tec.comp[v], 1);
+            tec.tree.add_edge(tec.comp[v], tec.comp[u], 1);
+        }
+        tec
+    }
+}
+
+fn build_two_edge_connected_components(now: usize, prev: usize, k: &mut usize, graph: &Graph, lowlink: &LowLinkData, tec: &mut TwoEdgeConnectedComponentsData) {
+    if prev != usize::MAX && lowlink.ord[prev] >= lowlink.low[now] {
+        tec.comp[now] = tec.comp[prev];
+    } else {
+        tec.comp[now] = *k;
+        *k += 1;
+    }
+
+    for &(nxt, _) in &graph.g[now] {
+        if tec.comp[nxt] == usize::MAX {
+            build_two_edge_connected_components(nxt, now, k, graph, lowlink, tec);
+        }
+    }
+}

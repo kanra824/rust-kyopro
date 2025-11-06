@@ -1,5 +1,6 @@
 pub type Cost = i64;
 
+#[derive(Clone, Debug)]
 pub struct Graph {
     pub n: usize,
     pub g: Vec<Vec<(usize, Cost)>>,
