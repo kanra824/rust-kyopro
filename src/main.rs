@@ -16,22 +16,13 @@ fn main() {
         edges: [(usize, usize); m],
     }
 
-    let mut g = Graph::from_unweighted_edges(n, edges);
-    let mut scc = g.strongly_connected_components();
-
-    pr(scc.len());
-    for v in scc {
-        print!("{}", v.len());
-        for val in v {
-            print!(" {}", val);
-        }
-        println!();
-    }
-    
+    let mut graph = Graph::from_edges(n, edges);
+    let mut lowlink = graph.lowlink();
+    let mut bc = graph.biconnected_components(&lowlink);
+    pd(bc);
 }
 
 mod library;
-mod tests;
 
 use proconio::marker::{Chars, Isize1, Usize1};
 use proconio::{input, source::line::LineSource};
@@ -193,7 +184,7 @@ impl Graph {
         }
     }
 
-    pub fn from_edges(n: usize, edges: Vec<(usize, usize, Cost)>) -> Self {
+    pub fn from_weighted_directed(n: usize, edges: Vec<(usize, usize, Cost)>) -> Self {
         let mut graph = Graph::new(n);
         for (u, v, c) in edges {
             graph.add_edge(u, v, c);
@@ -201,10 +192,28 @@ impl Graph {
         graph
     }
 
-    pub fn from_unweighted_edges(n: usize, edges: Vec<(usize, usize)>) -> Self {
+    pub fn from_directed(n: usize, edges: Vec<(usize, usize)>) -> Self {
         let mut graph = Graph::new(n);
         for (u, v) in edges {
             graph.add_edge(u, v, 1);
+        }
+        graph
+    }
+
+    pub fn from_weighted(n: usize, edges: Vec<(usize, usize, Cost)>) -> Self {
+        let mut graph = Graph::new(n);
+        for (u, v, c) in edges {
+            graph.add_edge(u, v, c);
+            graph.add_edge(v, u, c);
+        }
+        graph
+    }
+
+    pub fn from_edges(n: usize, edges: Vec<(usize, usize)>) -> Self {
+        let mut graph = Graph::new(n);
+        for (u, v) in edges {
+            graph.add_edge(u, v, 1);
+            graph.add_edge(v, u, 1);
         }
         graph
     }
@@ -227,78 +236,122 @@ impl Graph {
     }
 }
 
-pub trait StronglyConnectedComponents {
-    fn strongly_connected_components(&self) -> Vec<Vec<usize>>;
+
+#[derive(Clone, Debug)]
+pub struct LowLinkData {
+    ord: Vec<usize>,
+    low: Vec<usize>,
+    bridges: Vec<(usize, usize)>,
+    articulations: Vec<usize>,
 }
 
-impl StronglyConnectedComponents for Graph {
-    // 強連結成分の Vec をトポロジカルソート順に格納
-    fn strongly_connected_components(&self) -> Vec<Vec<usize>> {
-        let mut sel = vec![false; self.n];
-        let mut num = vec![usize::MAX; self.n];
-        let mut id = 0;
-        for i in 0..self.n {
-            if !sel[i] {
-                dfs_scc1(i, usize::MAX, &self.g, &mut sel, &mut num, &mut id);
+pub trait LowLink {
+    fn lowlink(&self) -> LowLinkData;
+}
+
+impl LowLink for Graph {
+    fn lowlink(&self) -> LowLinkData {
+        let n = self.n;
+        let mut visited = vec![false; n];
+        let mut ord = vec![usize::MAX; n];
+        let mut low = vec![usize::MAX; n];
+        let mut order = 0;
+
+        let mut lowlink = LowLinkData {
+            ord,
+            low,
+            bridges: vec![],
+            articulations: vec![]
+        };
+
+        for i in 0..n {
+            if !visited[i] {
+                build_lowlink(i, usize::MAX, &self, &mut visited, &mut order, &mut lowlink);
             }
         }
+        lowlink
+    }
+}
 
-        let mut v = vec![];
-        for i in 0..self.n {
-            v.push((num[i], i));
+fn build_lowlink(now: usize, prev: usize, graph: &Graph, visited: &mut Vec<bool>, order: &mut usize, lowlink: &mut LowLinkData) {
+    if visited[now] {
+        return;
+    }
+    visited[now] = true;
+    lowlink.ord[now] = *order;
+    lowlink.low[now] = *order;
+    *order += 1;
+    let mut is_articulation = false;
+    let mut cnt = 0;
+    for &(nxt, _) in &graph.g[now] {
+        if !visited[nxt] {
+            cnt += 1;
+            build_lowlink(nxt, now, graph, visited, order, lowlink);
+            lowlink.low[now] = lowlink.low[now].min(lowlink.low[nxt]);
+            is_articulation = is_articulation || prev != usize::MAX && lowlink.low[nxt] >= lowlink.ord[now];
+            if lowlink.ord[now] < lowlink.low[nxt] {
+                lowlink.bridges.push((now.min(nxt), now.max(nxt)));
+            }
+        } else if nxt != prev {
+            lowlink.low[now] = lowlink.low[now].min(lowlink.ord[nxt]);
         }
-        v.sort();
-        v.reverse();
+    }
+    is_articulation = is_articulation || prev == usize::MAX && cnt >= 2;
+    if is_articulation {
+        lowlink.articulations.push(now);
+    }
+}
 
-        let mut revg = self.rev();
-        let mut res = vec![];
-        sel = vec![false; self.n];
-        for i in 0..self.n {
-            let idx = v[i].1;
-            if sel[idx] {
+pub trait BiConnectedComponents: LowLink {
+    fn biconnected_components(&self, lowlink: &LowLinkData) -> Vec<Vec<usize>>;
+}
+
+impl BiConnectedComponents for Graph {
+    fn biconnected_components(&self, lowlink: &LowLinkData) -> Vec<Vec<usize>> {
+        let n = self.n;
+        let mut used = vec![false; n];
+        let mut tmp = vec![];
+        let mut bc = vec![];
+
+        for i in 0..n {
+            if used[i] {
                 continue;
             }
-            let mut resv = vec![];
-            dfs_scc2(idx, usize::MAX, &revg.g, &mut sel, &mut resv);
-            res.push(resv);
+            build_biconnected_components(i, usize::MAX, &self, &lowlink, &mut used, &mut tmp, &mut bc);
         }
-
-        res
+        bc
     }
-
 }
 
-fn dfs_scc1(now: usize, prev: usize, g: &Vec<Vec<(usize, Cost)>>, sel: &mut Vec<bool>, num: &mut Vec<usize>, id: &mut usize) {
-    sel[now] = true;
-
-    for &(nxt, _) in &g[now] {
+fn build_biconnected_components(now: usize, prev: usize, graph: &Graph, lowlink: &LowLinkData, used: &mut Vec<bool>, tmp: &mut Vec<usize>, bc: &mut Vec<Vec<usize>>) {
+    used[now] = true;
+    let mut tmp_bool = false;
+    for &(nxt, _) in &graph.g[now] {
         if nxt == prev {
-            continue;
+            let nowtmp = tmp_bool;
+            tmp_bool = true;
+            if !nowtmp {
+                continue;
+            }
         }
-        if sel[nxt] {
-            continue;
-        }
-
-        dfs_scc1(nxt, now, g, sel, num, id);
-    }
-
-    num[now] = *id;
-    *id += 1;
-}
-
-fn dfs_scc2(now: usize, prev: usize, g: &Vec<Vec<(usize, Cost)>>, sel: &mut Vec<bool>, res: &mut Vec<usize>) {
-    sel[now] = true;
-    res.push(now);
-
-    for &(nxt, _) in &g[now] {
-        if nxt == prev {
-            continue;
+        if !used[nxt] || lowlink.ord[nxt] < lowlink.ord[now] {
+            tmp.push((nxt))
         }
 
-        if sel[nxt] {
-            continue;
+        if !used[nxt] {
+            build_biconnected_components(nxt, now, graph, lowlink, used, tmp, bc);
+            if lowlink.low[nxt] >= lowlink.ord[now] {
+                bc.push(vec![]);
+                loop {
+                    let e = tmp.pop().unwrap();
+                    let sz = bc.len();
+                    bc[sz-1].push(e);
+                    if e == nxt {
+                        break;
+                    }
+                }
+            }
         }
-
-        dfs_scc2(nxt, now, g, sel, res);
     }
 }
+

@@ -15,7 +15,7 @@ impl Graph {
         }
     }
 
-    pub fn from_edges(n: usize, edges: Vec<(usize, usize, Cost)>) -> Self {
+    pub fn from_weighted_directed(n: usize, edges: Vec<(usize, usize, Cost)>) -> Self {
         let mut graph = Graph::new(n);
         for (u, v, c) in edges {
             graph.add_edge(u, v, c);
@@ -23,10 +23,28 @@ impl Graph {
         graph
     }
 
-    pub fn from_unweighted_edges(n: usize, edges: Vec<(usize, usize)>) -> Self {
+    pub fn from_directed(n: usize, edges: Vec<(usize, usize)>) -> Self {
         let mut graph = Graph::new(n);
         for (u, v) in edges {
             graph.add_edge(u, v, 1);
+        }
+        graph
+    }
+
+    pub fn from_weighted(n: usize, edges: Vec<(usize, usize, Cost)>) -> Self {
+        let mut graph = Graph::new(n);
+        for (u, v, c) in edges {
+            graph.add_edge(u, v, c);
+            graph.add_edge(v, u, c);
+        }
+        graph
+    }
+
+    pub fn from_edges(n: usize, edges: Vec<(usize, usize)>) -> Self {
+        let mut graph = Graph::new(n);
+        for (u, v) in edges {
+            graph.add_edge(u, v, 1);
+            graph.add_edge(v, u, 1);
         }
         graph
     }
