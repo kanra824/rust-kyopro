@@ -30,14 +30,14 @@ impl LowLink for Graph {
 
         for i in 0..n {
             if !visited[i] {
-                build_lowlink(i, usize::MAX, 0, &self, &mut visited, &mut order, &mut lowlink);
+                build_lowlink(i, usize::MAX, &self, &mut visited, &mut order, &mut lowlink);
             }
         }
         lowlink
     }
 }
 
-fn build_lowlink(now: usize, prev: usize, prev_cnt: usize, graph: &Graph, visited: &mut Vec<bool>, order: &mut usize, lowlink: &mut LowLinkData) {
+fn build_lowlink(now: usize, prev: usize, graph: &Graph, visited: &mut Vec<bool>, order: &mut usize, lowlink: &mut LowLinkData) {
     if visited[now] {
         return;
     }
@@ -46,24 +46,36 @@ fn build_lowlink(now: usize, prev: usize, prev_cnt: usize, graph: &Graph, visite
     lowlink.low[now] = *order;
     *order += 1;
     let mut is_articulation = false;
+    let mut tmp_bool = false;
     let mut cnt = 0;
 
-    let mut prev_cnt_mp = BTreeMap::new();
-    for &(nxt, _) in &graph.g[now] {
-        let val = prev_cnt_mp.entry(nxt).or_insert(0);
-        *val += 1;
-    }
+    // let mut prev_cnt_mp = BTreeMap::new();
+    // for &(nxt, _) in &graph.g[now] {
+    //     let val = prev_cnt_mp.entry(nxt).or_insert(0);
+    //     *val += 1;
+    // }
+
+    // for (&nxt, &prev_cnt) in &prev_cnt_mp {
 
     for &(nxt, _) in &graph.g[now] {
+        if nxt == prev {
+            let nowtmp = tmp_bool;
+            tmp_bool = true;
+            if !nowtmp {
+                continue;
+            }
+        }
+
         if !visited[nxt] {
             cnt += 1;
-            build_lowlink(nxt, now, prev_cnt_mp[&nxt], graph, visited, order, lowlink);
+            build_lowlink(nxt, now, graph, visited, order, lowlink);
             lowlink.low[now] = lowlink.low[now].min(lowlink.low[nxt]);
             is_articulation = is_articulation || prev != usize::MAX && lowlink.low[nxt] >= lowlink.ord[now];
             if lowlink.ord[now] < lowlink.low[nxt] {
                 lowlink.bridges.push((now.min(nxt), now.max(nxt)));
             }
-        } else if prev_cnt >= 2 || nxt != prev {
+        // } else if prev_cnt >= 2 || nxt != prev {
+        } else {
             lowlink.low[now] = lowlink.low[now].min(lowlink.ord[nxt]);
         }
     }
@@ -74,11 +86,12 @@ fn build_lowlink(now: usize, prev: usize, prev_cnt: usize, graph: &Graph, visite
 }
 
 pub trait BiConnectedComponents: LowLink {
-    fn biconnected_components(&self, lowlink: &LowLinkData) -> Vec<Vec<usize>>;
+    fn biconnected_components(&self, lowlink: &LowLinkData) -> Vec<Vec<(usize, usize)>>;
 }
 
 impl BiConnectedComponents for Graph {
-    fn biconnected_components(&self, lowlink: &LowLinkData) -> Vec<Vec<usize>> {
+    // 多重辺があるときに動作しないので、事前に多重辺を取り除いておく
+    fn biconnected_components(&self, lowlink: &LowLinkData) -> Vec<Vec<(usize, usize)>> {
         let n = self.n;
         let mut used = vec![false; n];
         let mut tmp = vec![];
@@ -94,19 +107,19 @@ impl BiConnectedComponents for Graph {
     }
 }
 
-fn build_biconnected_components(now: usize, prev: usize, graph: &Graph, lowlink: &LowLinkData, used: &mut Vec<bool>, tmp: &mut Vec<usize>, bc: &mut Vec<Vec<usize>>) {
+fn build_biconnected_components(now: usize, prev: usize, graph: &Graph, lowlink: &LowLinkData, used: &mut Vec<bool>, tmp: &mut Vec<(usize, usize)>, bc: &mut Vec<Vec<(usize, usize)>>) {
     used[now] = true;
     let mut tmp_bool = false;
     for &(nxt, _) in &graph.g[now] {
-        if nxt == prev {
-            let nowtmp = tmp_bool;
+        if nxt == prev && !tmp_bool {
             tmp_bool = true;
-            if !nowtmp {
-                continue;
-            }
+            continue;
         }
         if !used[nxt] || lowlink.ord[nxt] < lowlink.ord[now] {
-            tmp.push((nxt))
+            // pd(&lowlink);
+            // pd(&used);
+            // println!("{} {}", now, nxt);
+            tmp.push((now.min(nxt), now.max(nxt)));
         }
 
         if !used[nxt] {
@@ -117,7 +130,7 @@ fn build_biconnected_components(now: usize, prev: usize, graph: &Graph, lowlink:
                     let e = tmp.pop().unwrap();
                     let sz = bc.len();
                     bc[sz-1].push(e);
-                    if e == nxt {
+                    if e.0 == now.min(nxt) && e.1 == now.max(nxt) {
                         break;
                     }
                 }

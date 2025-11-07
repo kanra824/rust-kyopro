@@ -2,58 +2,62 @@
 
 fn main() {
     // // AOJ, codeforces, etc...
-    // let mut s = String::new();
-    // let stdin = stdin();
-    // let mut reader = Reader::new(&mut s, stdin);
+    let mut s = String::new();
+    let stdin = stdin();
+    let mut reader = Reader::new(&mut s, stdin);
 
     // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
-    input! {
-        // from &mut source,
-        n: usize,
-        m: usize,
-        edges: [(Usize1, Usize1); m],
-        q: usize,
+
+    let n: usize = reader.r();
+    let m: usize = reader.r();
+    let mut edges_st = BTreeSet::new();
+    for i in 0..m {
+        let mut u = reader.r();
+        let mut v = reader.r();
+        if u > v {
+            std::mem::swap(&mut u, &mut v);
+        }
+        edges_st.insert((u, v));
+    }
+
+    let mut edges = vec![];
+    for e in edges_st {
+        edges.push(e);
     }
 
     let mut graph = Graph::from_edges(n, edges);
     let mut lowlink = graph.lowlink();
-    let mut tec = graph.two_edge_connected_components(&lowlink);
+    let mut bc = graph.biconnected_components(&lowlink);
+    // pd(lowlink);
 
-    let mut t = vec![vec![]; tec.tree.n];
-    // tree check
-    for i in 0..tec.tree.n {
-        for &(nxt, _) in &tec.tree.g[i] {
-            t[i].push(nxt);
+    let mut isolated = vec![];
+    for i in 0..n {
+        if graph.g[i].len() == 0 {
+            isolated.push(i);
         }
     }
 
-    let mut hld = HeavyLightDecomposition::new(tec.tree.n, t);
-    
-    for _ in 0..q {
-        input! {
-            (a, b, c): (Usize1, Usize1, Usize1),
+    pr(bc.len() + isolated.len());
+    for v in bc {
+        let mut st = BTreeSet::new();
+        for (a, b) in v {
+            st.insert(a);
+            st.insert(b);
         }
-
-        let compa = tec.comp[a];
-        let compb = tec.comp[b];
-        let compc = tec.comp[c];
-
-        let dist_ab = hld.depth[compa] + hld.depth[compb] - 2 * hld.depth[hld.lca(compa, compb)];
-        let dist_bc = hld.depth[compb] + hld.depth[compc] - 2 * hld.depth[hld.lca(compb, compc)];
-        let dist_ac = hld.depth[compa] + hld.depth[compc] - 2 * hld.depth[hld.lca(compa, compc)];
-
-        if dist_ac == dist_ab + dist_bc {
-            pr("OK");
-        } else {
-            pr("NG");
+        print!("{}", st.len());
+        for e in st {
+            print!(" {}", e);
         }
+        println!();
+    }
+
+    for e in isolated {
+        println!("1 {}", e);
     }
 }
 
-use proconio::marker::{Chars, Isize1, Usize1};
-use proconio::{input, source::line::LineSource};
 use std::cmp::{max, min};
 use std::collections::*;
 use std::io::{stdin, stdout, BufReader, Read, Stdin, Write};
@@ -193,7 +197,9 @@ fn adj_pos(h: usize, w: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
 
 fn char_to_i64(c: char) -> i64 {
     c as u32 as i64 - '0' as u32 as i64
-}pub type Cost = i64;
+}
+
+pub type Cost = i64;
 
 #[derive(Clone, Debug)]
 pub struct Graph {
@@ -263,6 +269,7 @@ impl Graph {
     }
 }
 
+
 #[derive(Clone, Debug)]
 pub struct LowLinkData {
     ord: Vec<usize>,
@@ -292,14 +299,14 @@ impl LowLink for Graph {
 
         for i in 0..n {
             if !visited[i] {
-                build_lowlink(i, usize::MAX, 0, &self, &mut visited, &mut order, &mut lowlink);
+                build_lowlink(i, usize::MAX, &self, &mut visited, &mut order, &mut lowlink);
             }
         }
         lowlink
     }
 }
 
-fn build_lowlink(now: usize, prev: usize, prev_cnt: usize, graph: &Graph, visited: &mut Vec<bool>, order: &mut usize, lowlink: &mut LowLinkData) {
+fn build_lowlink(now: usize, prev: usize, graph: &Graph, visited: &mut Vec<bool>, order: &mut usize, lowlink: &mut LowLinkData) {
     if visited[now] {
         return;
     }
@@ -308,24 +315,36 @@ fn build_lowlink(now: usize, prev: usize, prev_cnt: usize, graph: &Graph, visite
     lowlink.low[now] = *order;
     *order += 1;
     let mut is_articulation = false;
+    let mut tmp_bool = false;
     let mut cnt = 0;
 
-    let mut prev_cnt_mp = BTreeMap::new();
-    for &(nxt, _) in &graph.g[now] {
-        let val = prev_cnt_mp.entry(nxt).or_insert(0);
-        *val += 1;
-    }
+    // let mut prev_cnt_mp = BTreeMap::new();
+    // for &(nxt, _) in &graph.g[now] {
+    //     let val = prev_cnt_mp.entry(nxt).or_insert(0);
+    //     *val += 1;
+    // }
+
+    // for (&nxt, &prev_cnt) in &prev_cnt_mp {
 
     for &(nxt, _) in &graph.g[now] {
+        if nxt == prev {
+            let nowtmp = tmp_bool;
+            tmp_bool = true;
+            if !nowtmp {
+                continue;
+            }
+        }
+
         if !visited[nxt] {
             cnt += 1;
-            build_lowlink(nxt, now, prev_cnt_mp[&nxt], graph, visited, order, lowlink);
+            build_lowlink(nxt, now, graph, visited, order, lowlink);
             lowlink.low[now] = lowlink.low[now].min(lowlink.low[nxt]);
             is_articulation = is_articulation || prev != usize::MAX && lowlink.low[nxt] >= lowlink.ord[now];
             if lowlink.ord[now] < lowlink.low[nxt] {
                 lowlink.bridges.push((now.min(nxt), now.max(nxt)));
             }
-        } else if prev_cnt >= 2 || nxt != prev {
+        // } else if prev_cnt >= 2 || nxt != prev {
+        } else {
             lowlink.low[now] = lowlink.low[now].min(lowlink.ord[nxt]);
         }
     }
@@ -336,11 +355,11 @@ fn build_lowlink(now: usize, prev: usize, prev_cnt: usize, graph: &Graph, visite
 }
 
 pub trait BiConnectedComponents: LowLink {
-    fn biconnected_components(&self, lowlink: &LowLinkData) -> Vec<Vec<usize>>;
+    fn biconnected_components(&self, lowlink: &LowLinkData) -> Vec<Vec<(usize, usize)>>;
 }
 
 impl BiConnectedComponents for Graph {
-    fn biconnected_components(&self, lowlink: &LowLinkData) -> Vec<Vec<usize>> {
+    fn biconnected_components(&self, lowlink: &LowLinkData) -> Vec<Vec<(usize, usize)>> {
         let n = self.n;
         let mut used = vec![false; n];
         let mut tmp = vec![];
@@ -356,19 +375,19 @@ impl BiConnectedComponents for Graph {
     }
 }
 
-fn build_biconnected_components(now: usize, prev: usize, graph: &Graph, lowlink: &LowLinkData, used: &mut Vec<bool>, tmp: &mut Vec<usize>, bc: &mut Vec<Vec<usize>>) {
+fn build_biconnected_components(now: usize, prev: usize, graph: &Graph, lowlink: &LowLinkData, used: &mut Vec<bool>, tmp: &mut Vec<(usize, usize)>, bc: &mut Vec<Vec<(usize, usize)>>) {
     used[now] = true;
     let mut tmp_bool = false;
     for &(nxt, _) in &graph.g[now] {
-        if nxt == prev {
-            let nowtmp = tmp_bool;
+        if nxt == prev && !tmp_bool {
             tmp_bool = true;
-            if !nowtmp {
-                continue;
-            }
+            continue;
         }
         if !used[nxt] || lowlink.ord[nxt] < lowlink.ord[now] {
-            tmp.push((nxt))
+            // pd(&lowlink);
+            // pd(&used);
+            // println!("{} {}", now, nxt);
+            tmp.push((now.min(nxt), now.max(nxt)));
         }
 
         if !used[nxt] {
@@ -379,7 +398,7 @@ fn build_biconnected_components(now: usize, prev: usize, graph: &Graph, lowlink:
                     let e = tmp.pop().unwrap();
                     let sz = bc.len();
                     bc[sz-1].push(e);
-                    if e == nxt {
+                    if e.0 == now.min(nxt) && e.1 == now.max(nxt) {
                         break;
                     }
                 }
@@ -439,132 +458,6 @@ fn build_two_edge_connected_components(now: usize, prev: usize, k: &mut usize, g
     for &(nxt, _) in &graph.g[now] {
         if tec.comp[nxt] == usize::MAX {
             build_two_edge_connected_components(nxt, now, k, graph, lowlink, tec);
-        }
-    }
-}
-// https://qiita.com/recuraki/items/cb888afdc107b64a4a6e
-// verify: https://atcoder.jp/contests/abc294/submissions/70278032
-// verify lca: https://onlinejudge.u-aizu.ac.jp/problems/GRL_5_C
-
-pub struct HeavyLightDecomposition {
-    n: usize,
-    g: Vec<Vec<usize>>,
-    prev: Vec<usize>,
-    depth: Vec<i64>,
-    child_cnt: Vec<i64>,
-    node_to_hld: Vec<usize>,
-    hld_to_node: Vec<usize>,
-    shallow: Vec<usize>,
-}
-
-impl HeavyLightDecomposition {
-    pub fn new(n: usize, g: Vec<Vec<usize>>) -> Self {
-        let mut res = HeavyLightDecomposition {
-            n,
-            g,
-            prev: vec![usize::MAX; n],
-            depth: vec![i64::MAX; n],
-            child_cnt: vec![i64::MAX; n],
-            node_to_hld: vec![usize::MAX; n], // 各 heavy-path に対してセグ木のクエリを実行したいときはこれで写した番号を使う
-            hld_to_node: vec![],
-            shallow: vec![usize::MAX; n],
-        };
-
-        res.dfs(0, usize::MAX, 0);
-        res.hld_rec(0, 0);
-
-        res
-    }
-
-    pub fn hld(&mut self, root: usize) -> Vec<usize> {
-        self.node_to_hld.clone()
-    }
-
-    pub fn lca(&self, mut u: usize, mut v: usize) -> usize {
-        while self.shallow[u] != self.shallow[v] {
-            // 浅いほうを u
-            if self.depth[self.shallow[u]] > self.depth[self.shallow[v]] {
-                std::mem::swap(&mut u, &mut v);
-            }
-
-            // v は shallow の前
-            v = self.prev[self.shallow[v]];
-        }
-        if self.node_to_hld[u] < self.node_to_hld[v] {
-            u
-        } else {
-            v
-        }
-    }
-
-    pub fn query(&self, mut u: usize, mut v: usize) -> Vec<(usize, usize)> {
-        // 同じ列に含まれる閉区間の列
-        // 同じ列の中では (浅いほう、深いほう) の順で返す
-
-        let mut res = vec![];
-        while self.shallow[u] != self.shallow[v] {
-            // 浅いほうを u
-            if self.depth[self.shallow[u]] > self.depth[self.shallow[v]] {
-                std::mem::swap(&mut u, &mut v);
-            }
-
-            // 深いほうを push
-            res.push((self.node_to_hld[self.shallow[v]], self.node_to_hld[v]));
-            v = self.prev[self.shallow[v]];
-        }
-        let mut val = (self.node_to_hld[u], self.node_to_hld[v]);
-        if val.0 > val.1 {
-            val = (val.1, val.0);
-        }
-        res.push(val);
-        res
-    }
-
-    fn dfs(&mut self, now: usize, prev: usize, nowd: i64) {
-        self.prev[now] = prev;
-        self.depth[now] = nowd;
-        self.child_cnt[now] = 1;
-        for nxt in self.g[now].clone() {
-            if nxt == prev {
-                continue;
-            }
-            self.dfs(nxt, now, nowd + 1);
-            self.child_cnt[now] += self.child_cnt[nxt];
-        }
-    }
-
-    fn hld_rec(&mut self, now: usize, top: usize) {
-        self.node_to_hld[now] = self.hld_to_node.len();
-        self.hld_to_node.push(now);
-        self.shallow[now] = top;
-        if self.child_cnt[now] == 1 {
-            return;
-        }
-
-        let mut ma = 0;
-        let mut maidx = usize::MAX;
-        for i in 0..self.g[now].len() {
-            let nxt = self.g[now][i];
-            if nxt == self.prev[now] {
-                continue;
-            }
-            if self.child_cnt[nxt] > ma {
-                ma = self.child_cnt[nxt];
-                maidx = nxt;
-            }
-        }
-
-        self.hld_rec(maidx, top);
-
-        for i in 0..self.g[now].len() {
-            let nxt = self.g[now][i];
-            if nxt == self.prev[now] {
-                continue;
-            }
-            if nxt == maidx {
-                continue;
-            }
-            self.hld_rec(nxt, nxt);
         }
     }
 }
