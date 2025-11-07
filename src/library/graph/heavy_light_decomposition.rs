@@ -15,21 +15,24 @@ pub struct HeavyLightDecomposition {
 
 impl HeavyLightDecomposition {
     pub fn new(n: usize, g: Vec<Vec<usize>>) -> Self {
-        HeavyLightDecomposition {
+        let mut res = HeavyLightDecomposition {
             n,
             g,
             prev: vec![usize::MAX; n],
             depth: vec![i64::MAX; n],
             child_cnt: vec![i64::MAX; n],
-            node_to_hld: vec![usize::MAX; n],
+            node_to_hld: vec![usize::MAX; n], // 各 heavy-path に対してセグ木のクエリを実行したいときはこれで写した番号を使う
             hld_to_node: vec![],
             shallow: vec![usize::MAX; n],
-        }
+        };
+
+        res.dfs(0, usize::MAX, 0);
+        res.hld_rec(0, 0);
+
+        res
     }
 
     pub fn hld(&mut self, root: usize) -> Vec<usize> {
-        self.dfs(root, usize::MAX, 0);
-        self.hld_rec(root, root);
         self.node_to_hld.clone()
     }
 
