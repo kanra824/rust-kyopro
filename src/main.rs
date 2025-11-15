@@ -1,61 +1,51 @@
 #![allow(unused)]
 
-pub fn z_algorithm(s: &Vec<char>) -> Vec<usize> {
-    let n = s.len();
-    let mut res = vec![0; n];
-    res[0] = s.len();
-    let mut i = 1;
-    let mut j = 0;
-    while i < s.len() {
-        while i + j < s.len() && s[j] == s[i+j] {
-            j += 1;
+fn get_path(n: usize, from: (usize, usize), to: (usize, usize), d: &Vec<Vec<i64>>, g: &Vec<Vec<usize>>) -> Vec<(usize, usize, char)> {
+    let mut now = from;
+    let mut res = vec![];
+    while now != to {
+        let (r, c) = now;
+        let mut mi = i64::MAX;
+        let mut miidx = (usize::MAX, usize::MAX);
+        for &nxt in &g[r*n+c] {
+            let nr = nxt / n;
+            let nc = nxt % n;
+            let nowd = d[nr*n+nc][to.0*n+to.1];
+            if nowd < mi {
+                mi = nowd;
+                miidx = (nr, nc);
+            }
         }
 
-        res[i] = j;
-        if j == 0 {
-            i += 1;
-            continue;
-        }
-        let mut k = 1;
-        while i + k < s.len() && k + res[k] < j {
-            res[i+k] = res[k];
-            k += 1;
-        }
-
-        i += k;
-        j -= k;
+        let dir = if c == miidx.1 + 1 {
+            'L'
+        } else if c + 1 == miidx.1 {
+            'R'
+        } else if r == miidx.0 + 1 {
+            'U'
+        } else {
+            'D'
+        };
+        
+        res.push((now.0, now.1, dir));
+        now = miidx;
     }
+    res.push((now.0, now.1, 'S'));
     res
 }
 
-fn solve() {
-    input! {
-        a: Chars,
-        b: Chars,
+fn dir_to_num(dir: char) -> i32 {
+    if dir == 'L' {
+        0
+    } else if dir == 'U' {
+        1
+    } else if dir == 'R' {
+        2
+    } else if dir == 'D' {
+        3
+    } else {
+        panic!();
     }
-
-    let n = a.len();
-    let mut v = vec![];
-    for i in 0..n {
-        v.push(b[i]);
-    }
-    v.push('#');
-    for i in 0..n {
-        v.push(a[i]);
-    }
-    for i in 0..n {
-        v.push(a[i]);
-    }
-
-    let res = z_algorithm(&v);
-
-    for i in n+1..2*n+1    {
-        if res[i] == n {
-            pr(i - n - 1);
-            return;
-        }
-    }
-    pr(-1);
 }
 
 fn main() {
@@ -69,14 +59,144 @@ fn main() {
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
         // from &mut source,
+        n: usize,
+        k: usize,
         t: usize,
+        v: [Chars; n],
+        h: [Chars; n-1],
+        pos: [(usize, usize); k],
     }
 
-    for _ in 0..t {
-        solve();
+    // 普通に位置と座標
+    // col だけ圧縮 -> 19265
+    // state も圧縮 -> 22620
+
+
+    let mut g = vec![vec![]; n*n];
+    let mut d = vec![vec![i64::MAX;n*n];n*n];
+    for i in 0..n*n {
+        d[i][i] = 0;
     }
+    for i in 0..n {
+        for j in 0..n-1 {
+            if v[i][j] == '0' {
+                g[i*n+j].push(i*n+j+1);
+                g[i*n+j+1].push(i*n+j);
+                d[i*n+j][i*n+j+1] = 1;
+                d[i*n+j+1][i*n+j] = 1;
+            }
+        }
+    }
+
+    for i in 0..n-1 {
+        for j in 0..n {
+            if h[i][j] == '0' {
+                g[i*n+j].push((i+1)*n+j);
+                g[(i+1)*n+j].push(i*n+j);
+                d[i*n+j][(i+1)*n+j] = 1;
+                d[(i+1)*n+j][i*n+j]= 1;
+            }
+        }
+    }
+
+    for k in 0..n*n {
+        for i in 0..n*n {
+            for j in 0..n*n {
+                if d[i][k] != i64::MAX && d[k][j] != i64::MAX {
+                    d[i][j] = d[i][j].min(d[i][k] + d[k][j]);
+                }
+            }
+        }
+    }
+
+    let mut ans = Vec::new();
+    for i in 0..k-1 {
+        let v = get_path(n, pos[i], pos[i+1], &d, &g);
+        let mut first = true;
+        for j in 0..v.len()-1 {
+            let (r, c, dir) = v[j];
+            // col: r * n + c
+            // q: i
+            // a(c, q): colとおなじ
+            // s(c, q): i
+            // d(c, q): dir
+
+            let col = r * n + c;
+            let (nr, nc, ndir) = v[j+1];
+            if i > 0 && first {
+                ans.push(((col, i-1), (col, i, dir, r, c, nr, nc)));
+                first = false;
+            } else {
+                ans.push(((col, i), (col, i, dir, r, c, nr, nc)));
+            }
+        }
+    }
+
+
+    let mut turn_mp = vec![vec![BTreeMap::new(); n]; n];
+    let mut turn_id = vec![vec![0; n]; n];
+    turn_mp[pos[0].0][pos[0].1].insert(0, 0);
+    turn_id[pos[0].0][pos[0].1] += 1;
+    for &((col, q), (a, s, d, r, c, nr, nc)) in &ans {
+        // eprintln!("({}, {}), ({}, {}, {}, {}, {}, {}, {})", col, q, a, s, d, r, c, nr, nc);
+        // eprintln!("{} {:?} {:?}", q, turn_mp[r][c], turn_id[r][c]);
+        if !turn_mp[r][c].contains_key(&q) {
+            turn_mp[r][c].insert(q, turn_id[r][c]);
+            turn_id[r][c] += 1;
+        }
+        // eprintln!("{} {:?} {:?}", s, turn_mp[nr][nc], turn_id[nr][nc]);
+        if !turn_mp[nr][nc].contains_key(&s) {
+            turn_mp[nr][nc].insert(s, turn_id[nr][nc]);
+            turn_id[nr][nc] += 1;
+        }
+    }
+
+    let mut col_mp = HashMap::new();
+    let mut col_id = 0;
+    for &((col, q), (a, s, d, r, c, nr, nc)) in &ans {
+        if !col_mp.contains_key(&col) {
+            col_mp.insert(col, col_id);
+            col_id += 1;
+        }
+    }
+
+    let mut c = col_id;
+    let mut q = 0;
+    for i in 0..n {
+        for j in 0..n {
+            q = q.max(turn_id[i][j]);
+        }
+    }
+
+    let mut init_col = vec![vec![0; n]; n];
+    for i in 0..n {
+        for j in 0..n {
+            let &mut col = col_mp.entry(i*n+j).or_insert(0);
+            init_col[i][j] = col;
+        }
+    }
+
+    println!("{} {} {}", c, q, ans.len());
+    for i in 0..n {
+        for j in 0..n {
+            print!("{}", init_col[i][j]);
+            if j == n-1 {
+                println!();
+            } else {
+                print!(" ");
+            }
+        }
+    }
+    // eprintln!("{:?}", &turn_mp[12][10]);
+    // eprintln!("{:?}", &turn_mp[12][11]);
+
+    for ((col, q), (a, s, d, r, c, nr, nc)) in ans {
+        // eprintln!("({}, {}), ({}, {}, {}, {}, {}, {}, {})", col, q, a, s, d, r, c, nr, nc);
+        println!("{} {} {} {} {}", col_mp[&col], turn_mp[r][c][&q], col_mp[&col], turn_mp[nr][nc][&s], d);
+    }
+
+
 }
-
 
 use proconio::marker::{Chars, Isize1, Usize1};
 use proconio::{input, source::line::LineSource};
@@ -220,3 +340,4 @@ fn adj_pos(h: usize, w: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
 fn char_to_i64(c: char) -> i64 {
     c as u32 as i64 - '0' as u32 as i64
 }
+

@@ -1,6 +1,7 @@
 
 use anyhow::Result;
 use std::env;
+use std::fs::File;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
@@ -13,6 +14,9 @@ pub fn vis(num: usize) -> Result<ExitStatus> {
     let input = format!("in/{}.txt", num);
     let output = format!("out/{}.txt", num);
 
+    std::fs::create_dir_all(contest_dir.to_string() + "/score")?;
+    let score = File::create(format!("{}/score/{}.txt", contest_dir, num)).unwrap();
+    let score = Stdio::from(score);
 
     // ビルドされてなければビルド
     if !Path::is_file(Path::new(&format!("{}/target/release/vis", &contest_dir))) {
@@ -30,7 +34,8 @@ pub fn vis(num: usize) -> Result<ExitStatus> {
     let status = Command::new(&format!("{}/target/release/vis", &contest_dir))
         .args([&input, &output, &num])
         .current_dir(contest_dir)
-        //.stderr(Stdio::null())
+        .stderr(Stdio::null())
+        .stdout(score)
         .status()?;
 
     Ok(status)

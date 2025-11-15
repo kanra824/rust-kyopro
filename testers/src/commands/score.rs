@@ -21,7 +21,9 @@ pub fn score_all (contest_dir: String) -> Result<ExitStatus> {
 
     let mut score_all = 0;
     for i in 0..n {
-        score_all += score(i, contest_dir.clone())?;
+        let score = score(i, contest_dir.clone())?;
+        eprintln!("{}: {}", i, score);
+        score_all += score;
     }
     eprintln!("{}", score_all);
 
