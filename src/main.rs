@@ -239,15 +239,15 @@ fn main() {
     sz_c += 1;
     sz_q += 1;
 
+    // let sz_c_mi = sz_c;
+    // let sz_c_ma = sz_c;
+    // let sz_q_mi = sz_q;
+    // let sz_q_ma = sz_q;
 
     let sz_c_mi = sz_c * 7 / 10;
-    let sz_c_ma = sz_c * 9 / 10;
+    let sz_c_ma = sz_c;
     let sz_q_mi = sz_q / 2;
-    let sz_q_ma = if n >= 17 {
-        sz_q * 8 / 10
-    } else {
-        sz_q
-    };
+    let sz_q_ma = sz_q * 8 / 10;
 
     let mut score = usize::MAX;
     let mut ans_sz_c = 0;
@@ -264,6 +264,14 @@ fn main() {
             // sz_c, sz_q を基準に、できるだけ使いまわせるように作り直す
             let mut ans_st = BTreeSet::new();
             let mut init_col = vec![vec![0; n]; n];
+
+            for i in 0..n {
+                for j in 0..n {
+                    let col = rng.rand_u32(0, sz_c as u32 - 2) as usize;
+                    init_col[i][j] = col;
+                }
+            }
+
             let mut qv = vec![vec![0; n]; n];
             let mut mp = BTreeMap::new(); // (c, q) -> (a, s, d);
             let mut mp_rev = BTreeMap::new();
@@ -290,14 +298,15 @@ fn main() {
                     ans_st.insert((col, q, ncol, nq, dir));
                 } else {
                     // q を調べる
-                    let mut ma = (0, 0); // (繰り返し回数, -q_col)
+                    let mut ma = (0, 0, 0, 0); // (繰り返し回数, -q_col)
                     let mut maq_v = vec![];
                     for nowq in 0..=q_ma {
-                        if q_col[nowq] >= sz_c as usize - 1 {
+                        if q_col[nowq] >= sz_c as usize {
                             continue;
                         }
                         let mut update_v = vec![];
                         let col = q_col[nowq];
+                        q_col[nowq] += 1;
                         update_v.push((r, c, init_col[r][c], qv[r][c]));
                         init_col[r][c] = col;
                         qv[r][c] = nowq;
@@ -319,21 +328,64 @@ fn main() {
                             idx -= 1;
                         }
 
+                        // q の先を探索して、ma.0 には繰り返し回数の和を入れる
+                        let mut macnt = 0;
+                        if idx >= 2 {
+                            for nxtq in 0..q_ma {
+                                if q_col[nxtq] >= sz_c as usize {
+                                    continue;
+                                }
+                                let (dir, r, c, nr, nc) = ans[idx];
+                                let mut update_v = vec![];
+                                let col = q_col[nxtq];
+                                update_v.push((r, c, init_col[r][c], qv[r][c]));
+                                init_col[r][c] = col;
+                                qv[r][c] = nxtq;
+                                let mut cnt = 0;
+                                let mut nowidx = idx-1;
+                                while nowidx > 0 {
+                                    let (dir, r, c, nr, nc) = ans[nowidx];
+                                    let ncol = init_col[r][c];
+                                    let nq = qv[nr][nc];
+                                    if mp_rev.contains_key(&(ncol, nq, dir)) {
+                                        let (col, q) = mp_rev[&(ncol, nq, dir)];
+                                        update_v.push((r, c, init_col[r][c], qv[r][c]));
+                                        init_col[r][c] = col;
+                                        qv[r][c] = q;
+                                        cnt += 1;
+                                    } else {
+                                        break;
+                                    }
+                                    nowidx -= 1;
+                                }
+
+                                for j in (0..update_v.len()).rev() {
+                                    let (r, c, col, q) = update_v[j];
+                                    init_col[r][c] = col;
+                                    qv[r][c] = q;
+                                }
+
+                                macnt = macnt.max(cnt);
+                            }
+                        }
+
                         for j in (0..update_v.len()).rev() {
                             let (r, c, col, q) = update_v[j];
                             init_col[r][c] = col;
                             qv[r][c] = q;
                         }
 
-                        if ma < (cnt, -(q_col[nowq] as i32)) {
-                            ma = (cnt, -(q_col[nowq] as i32));
+                        q_col[nowq] -= 1;
+
+                        if ma < (cnt + macnt, -(q_col[nowq] as i32), cnt, macnt) {
+                            ma = (cnt + macnt, -(q_col[nowq] as i32), cnt, macnt);
                             maq_v.clear();
                             maq_v.push(nowq);
-                        } else if ma == (cnt, -(q_col[nowq] as i32)) {
+                        } else if ma == (cnt + macnt, -(q_col[nowq] as i32), cnt, macnt) {
                             maq_v.push(nowq);
                         }
                     }
-                    // eprintln!("{} {}", i, macnt);
+                    // eprintln!("{} {:?} {:?}", i, ma, maq_v);
 
                     let (col, q) = if ma.0 == 0 {
                         while used_id.contains(&id) {
