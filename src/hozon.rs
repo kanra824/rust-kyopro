@@ -48,23 +48,6 @@ fn dir_to_num(dir: char) -> i32 {
     }
 }
 
-fn next_cq(mut c: i32, mut q: i32, mut x: i32) -> (i32, i32, i32) {
-    if q == x {
-        if c == x {
-            q -= 1;
-        } else {
-            c += 1;
-        }
-    } else if q == 0 {
-        x += 1;
-        q = x;
-        c = 0;
-    } else {
-        q -= 1;
-    }
-    (c, q, x)
-}
-
 fn main() {
     // // AOJ, codeforces, etc...
     // let mut s = String::new();
@@ -129,60 +112,135 @@ fn main() {
     let mut ans = Vec::new();
     for i in 0..k-1 {
         let v = get_path(n, pos[i], pos[i+1], &d, &g);
+        let mut first = true;
         for j in 0..v.len()-1 {
             let (r, c, dir) = v[j];
+            // col: r * n + c
+            // q: i
+            // a(c, q): colとおなじ
+            // s(c, q): i
+            // d(c, q): dir
+
+            let col = r * n + c;
             let (nr, nc, ndir) = v[j+1];
-            ans.push((dir, r, c, nr, nc));
+            if i > 0 && first {
+                ans.push(((col, i-1), (col, i, dir, r, c, nr, nc)));
+                first = false;
+            } else {
+                ans.push(((col, i), (col, i, dir, r, c, nr, nc)));
+            }
         }
     }
 
-    let mut mp = BTreeMap::new(); // (c, q) -> (a, s, d);
-    let mut mp_rev = BTreeMap::new();
-    let mut id = (0, 1, 1); // (c, q, x), (0, 0) は最後に使うので、(0, 1) から始める
+
+    let mut turn_mp = vec![vec![BTreeMap::new(); n]; n];
+    let mut turn_id = vec![vec![0; n]; n];
+    turn_mp[pos[0].0][pos[0].1].insert(0, 0);
+    turn_id[pos[0].0][pos[0].1] += 1;
+    for &((col, q), (a, s, d, r, c, nr, nc)) in &ans {
+        // eprintln!("({}, {}), ({}, {}, {}, {}, {}, {}, {})", col, q, a, s, d, r, c, nr, nc);
+        // eprintln!("{} {:?} {:?}", q, turn_mp[r][c], turn_id[r][c]);
+        if !turn_mp[r][c].contains_key(&q) {
+            turn_mp[r][c].insert(q, turn_id[r][c]);
+            turn_id[r][c] += 1;
+        }
+        // eprintln!("{} {:?} {:?}", s, turn_mp[nr][nc], turn_id[nr][nc]);
+        if !turn_mp[nr][nc].contains_key(&s) {
+            turn_mp[nr][nc].insert(s, turn_id[nr][nc]);
+            turn_id[nr][nc] += 1;
+        }
+    }
+
+
+    // init_col を 全部0 で初期化する
+    // ans を後ろから順にみて、(col, q) から (a, s, d) が決まるように色を決める
+    // (col, q) の組をキーとする map を持って、キーが被ったら col を増やして登録
+
     let mut init_col = vec![vec![0; n]; n];
-    let mut qv = vec![vec![0; n]; n];
-    let mut ans_st = BTreeSet::new();
+    let mut col_mp = BTreeMap::new();
+    let mut col_id = BTreeMap::new();
     for i in (0..ans.len()).rev() {
-        let (dir, r, c, nr, nc) = ans[i];
+        let ((col, q), (a, s, d, r, c, nr, nc)) = ans[i];
+        let q = turn_mp[r][c][&q];
+        let s = turn_mp[nr][nc][&s];
+        
         let ncol = init_col[r][c];
-        let nq = qv[nr][nc];
-        let (col, q, x) = id;
-        if i == 0 {
-            // (0, 0) を使用
-            ans_st.insert((0, 0, ncol, nq, dir));
-            init_col[r][c] = 0;
-        } else if mp_rev.contains_key(&(ncol, nq, dir)) {
-            let (col, q) = mp_rev[&(ncol, nq, dir)];
-            init_col[r][c] = col;
-            qv[r][c] = q;
-            ans_st.insert((col, q, ncol, nq, dir));
-        } else if mp.contains_key(&(col, q)) {
-            id = next_cq(col, q, x);
-            let (col, q, x) = id;
-            mp.insert((col, q), (ncol, nq, dir));
-            mp_rev.insert( (ncol, nq, dir), (col, q));
-            init_col[r][c] = col;
-            qv[r][c] = q;
-            ans_st.insert((col, q, ncol, nq, dir));
+        let nowcol = col_id.entry(q).or_insert(0);
+        if col_mp.contains_key(&(*nowcol, q)) {
+            let val = col_mp[&(*nowcol, q)];
+            if val != (ncol, s, d) {
+                *nowcol += 1;
+            }
+            col_mp.insert((*nowcol, q), (ncol, s, d));
+            init_col[r][c] = *nowcol;
+            ans[i] = ((*nowcol, q), (ncol, s, d, r, c, nr, nc));
+            // eprintln!("({}, {}), ({}, {}, {}, {}, {}, {}, {})", *nowcol, q, ncol, s, d, r, c, nr, nc);
+            // eprintln!("{:?}", ans[i]);
+            // eprintln!();
         } else {
-            mp.insert((col, q), (ncol, nq, dir));
-            mp_rev.insert( (ncol, nq, dir), (col, q));
-            init_col[r][c] = col;
-            qv[r][c] = q;
-            ans_st.insert((col, q, ncol, nq, dir));
+            col_mp.insert((*nowcol, q), (ncol, s, d));
+            init_col[r][c] = *nowcol;
+            ans[i] = ((*nowcol, q), (ncol, s, d, r, c, nr, nc));
+            // eprintln!("({}, {}), ({}, {}, {}, {}, {}, {}, {})", *nowcol, q, ncol, s, d, r, c, nr, nc);
+            // eprintln!("{:?}", ans[i]);
+            // eprintln!();
         }
     }
 
-    let mut sz_c = 0;
-    let mut sz_q = 0;
-    for &(col, q, _, _, _) in &ans_st {
-        sz_c = sz_c.max(col);
-        sz_q = sz_q.max(q);
-    }
-    sz_c += 1;
-    sz_q += 1;
+    // for i in (0..ans.len()).rev() {
+    //     let ((col, q), (a, s, d, r, c, nr, nc)) = ans[i];
+    //     eprintln!("{:?}", ans[i]);
+    //     if col == 220 {
+    //         panic!();
+    //     }
+    // }
 
-    println!("{} {} {}", sz_c, sz_q, ans_st.len());
+    // let mut col_mp = HashMap::new();
+    // let mut col_id = 0;
+    // for &((col, q), (a, s, d, r, c, nr, nc)) in &ans {
+    //     if !col_mp.contains_key(&col) {
+    //         col_mp.insert(col, col_id);
+    //         col_id += 1;
+    //     }
+    // }
+
+    // eprintln!("{:?}", col_id);
+
+    let mut c = 0;
+    for (_, &v) in &col_id {
+        c = c.max(v);
+    }
+    c += 1;
+
+    let mut q = 0;
+    for i in 0..n {
+        for j in 0..n {
+            q = q.max(turn_id[i][j]);
+        }
+    }
+
+    // let mut init_col = vec![vec![0; n]; n];
+    // for i in 0..n {
+    //     for j in 0..n {
+    //         let &mut col = col_mp.entry(i*n+j).or_insert(0);
+    //         init_col[i][j] = col;
+    //     }
+    // }
+
+    let mut ans_st = BTreeSet::new();
+    let mut ans_out = vec![];
+    for ((col, q), (a, s, d, r, c, nr, nc)) in ans {
+        // let q = turn_mp[r][c][&q];
+        // let s = turn_mp[nr][nc][&s];
+        if ans_st.contains(&(col, q)) {
+            continue;
+        }
+        ans_out.push((col, q, a, s, d));
+        ans_st.insert((col, q));
+    }
+
+
+    println!("{} {} {}", c, q, ans_st.len());
     for i in 0..n {
         for j in 0..n {
             print!("{}", init_col[i][j]);
@@ -193,11 +251,15 @@ fn main() {
             }
         }
     }
+    // eprintln!("{:?}", &turn_mp[12][10]);
+    // eprintln!("{:?}", &turn_mp[12][11]);
 
-    for (col, q, a, s, d) in ans_st {
+    // eprintln!("{:?}", col_id);
+    
+
+    for (col, q, a, s, d) in ans_out {
         println!("{} {} {} {} {}", col, q, a, s, d);
     }
-
 
 
 }
