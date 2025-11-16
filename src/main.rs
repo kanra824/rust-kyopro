@@ -1,5 +1,53 @@
 #![allow(unused)]
 
+use std::time::{Instant, SystemTime};
+
+#[derive(Debug)]
+struct XorShift {
+    w: u32,
+    x: u32,
+    y: u32,
+    z: u32,
+}
+
+impl XorShift {
+    fn new() -> Self {
+        let d = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
+        let seed = d.as_secs() as u32;
+        Self::from_seed(seed)
+    }
+
+    fn from_seed(seed: u32) -> Self {
+        let w = seed;
+        let x = w << 13;
+        let y = (w >> 9) ^ (x << 6);
+        let z = y >> 7;
+        Self { w, x, y, z }
+    }
+
+    fn rand(&mut self) -> u32 {
+        let t = self.x ^ (self.x << 11);
+        self.x = self.y;
+        self.y = self.z;
+        self.z = self.w;
+        self.w = (self.w ^ (self.w >> 19) ^ (t ^ (t >> 8)));
+        self.w
+    }
+
+    // [min, max] のu32乱数
+    fn rand_u32(&mut self, min: u32, max: u32) -> u32 {
+        self.rand() % (max - min + 1) + min
+    }
+
+    // [min, max] のf64乱数
+    fn rand_double(&mut self, min: f64, max: f64) -> f64 {
+        (self.rand() % 0xFFFF) as f64 / (0xFFFF as f64 * (max - min) + min)
+    }
+}
+
+
 fn get_path(n: usize, from: (usize, usize), to: (usize, usize), d: &Vec<Vec<i64>>, g: &Vec<Vec<usize>>) -> Vec<(usize, usize, char)> {
     let mut now = from;
     let mut res = vec![];
@@ -65,7 +113,17 @@ fn next_cq(mut c: i32, mut q: i32, mut x: i32) -> (i32, i32, i32) {
     (c, q, x)
 }
 
+fn next_cq2(mut c: usize, mut q: usize, sz_q: usize) -> (usize, usize) {
+    q += 1;
+    if q == sz_q {
+        q = 0;
+        c += 1;
+    }
+    (c, q)
+}
+
 fn main() {
+    let start = Instant::now();
     // // AOJ, codeforces, etc...
     // let mut s = String::new();
     // let stdin = stdin();
@@ -87,6 +145,8 @@ fn main() {
     // 普通に位置と座標
     // col だけ圧縮 -> 19265
     // state も圧縮 -> 22620
+    // q 探索 -> 提出:2870, ローカル:4588
+    // c, q の幅決め打ちして探索 -> 提出:2595, ローカル:4149
 
 
     let mut g = vec![vec![]; n*n];
@@ -136,56 +196,196 @@ fn main() {
         }
     }
 
-    let mut mp = BTreeMap::new(); // (c, q) -> (a, s, d);
-    let mut mp_rev = BTreeMap::new();
-    let mut id = (0, 1, 1); // (c, q, x), (0, 0) は最後に使うので、(0, 1) から始める
-    let mut init_col = vec![vec![0; n]; n];
-    let mut qv = vec![vec![0; n]; n];
     let mut ans_st = BTreeSet::new();
-    for i in (0..ans.len()).rev() {
-        let (dir, r, c, nr, nc) = ans[i];
-        let ncol = init_col[r][c];
-        let nq = qv[nr][nc];
-        let (col, q, x) = id;
-        if i == 0 {
-            // (0, 0) を使用
-            ans_st.insert((0, 0, ncol, nq, dir));
-            init_col[r][c] = 0;
-        } else if mp_rev.contains_key(&(ncol, nq, dir)) {
-            let (col, q) = mp_rev[&(ncol, nq, dir)];
-            init_col[r][c] = col;
-            qv[r][c] = q;
-            ans_st.insert((col, q, ncol, nq, dir));
-        } else if mp.contains_key(&(col, q)) {
-            id = next_cq(col, q, x);
+    {
+        let mut init_col = vec![vec![0; n]; n];
+        let mut mp = BTreeMap::new(); // (c, q) -> (a, s, d);
+        let mut mp_rev = BTreeMap::new();
+        let mut id = (0, 1, 1); // (c, q, x), (0, 0) は最後に使うので、(0, 1) から始める
+        let mut qv = vec![vec![0; n]; n];
+        for i in (0..ans.len()).rev() {
+            let (dir, r, c, nr, nc) = ans[i];
+            let ncol = init_col[r][c];
+            let nq = qv[nr][nc];
             let (col, q, x) = id;
-            mp.insert((col, q), (ncol, nq, dir));
-            mp_rev.insert( (ncol, nq, dir), (col, q));
-            init_col[r][c] = col;
-            qv[r][c] = q;
-            ans_st.insert((col, q, ncol, nq, dir));
-        } else {
-            mp.insert((col, q), (ncol, nq, dir));
-            mp_rev.insert( (ncol, nq, dir), (col, q));
-            init_col[r][c] = col;
-            qv[r][c] = q;
-            ans_st.insert((col, q, ncol, nq, dir));
+            if i == 0 {
+                // (0, 0) を使用
+                ans_st.insert((0, 0, ncol, nq, dir));
+                init_col[r][c] = 0;
+            } else if mp_rev.contains_key(&(ncol, nq, dir)) {
+                let (col, q) = mp_rev[&(ncol, nq, dir)];
+                init_col[r][c] = col;
+                qv[r][c] = q;
+                ans_st.insert((col, q, ncol, nq, dir));
+            } else {
+                mp.insert((col, q), (ncol, nq, dir));
+                mp_rev.insert( (ncol, nq, dir), (col, q));
+                init_col[r][c] = col;
+                qv[r][c] = q;
+                ans_st.insert((col, q, ncol, nq, dir));
+                id = next_cq(col, q, x);
+            }
         }
     }
 
     let mut sz_c = 0;
     let mut sz_q = 0;
-    for &(col, q, _, _, _) in &ans_st {
+    for &(col, q, a, s, d) in &ans_st {
         sz_c = sz_c.max(col);
+        sz_c = sz_c.max(a);
         sz_q = sz_q.max(q);
+        sz_q = sz_q.max(s);
     }
     sz_c += 1;
     sz_q += 1;
 
-    println!("{} {} {}", sz_c, sz_q, ans_st.len());
+
+    let sz_c_mi = sz_c * 7 / 10;
+    let sz_c_ma = sz_c * 9 / 10;
+    let sz_q_mi = sz_q / 2;
+    let sz_q_ma = if n >= 17 {
+        sz_q * 8 / 10
+    } else {
+        sz_q
+    };
+
+    let mut score = usize::MAX;
+    let mut ans_sz_c = 0;
+    let mut ans_sz_q = 0;
+    let mut ans_st_mi = BTreeSet::new();
+    let mut init_col_mi = vec![];
+    let mut rng = XorShift::new();
+    'outer: for sz_c in (sz_c_mi..=sz_c_ma).rev() {
+        for sz_q in sz_q_mi..=sz_q_ma {
+            if start.elapsed() >= std::time::Duration::from_millis(1970) {
+                break 'outer;
+            }
+
+            // sz_c, sz_q を基準に、できるだけ使いまわせるように作り直す
+            let mut ans_st = BTreeSet::new();
+            let mut init_col = vec![vec![0; n]; n];
+            let mut qv = vec![vec![0; n]; n];
+            let mut mp = BTreeMap::new(); // (c, q) -> (a, s, d);
+            let mut mp_rev = BTreeMap::new();
+            let mut q_col = vec![0; sz_q as usize];
+            q_col[0] = 1;
+            let mut q_ma = 0;
+
+            let mut id = (0, 1);
+            let mut used_id = BTreeSet::new();
+
+            for i in (0..ans.len()).rev() {
+                let (dir, r, c, nr, nc) = ans[i];
+                let ncol = init_col[r][c];
+                let nq = qv[nr][nc];
+
+                if i == 0 {
+                    // (0, 0) を使用
+                    ans_st.insert((0, 0, ncol, nq, dir));
+                    init_col[r][c] = 0;
+                } else if mp_rev.contains_key(&(ncol, nq, dir)) {
+                    let (col, q) = mp_rev[&(ncol, nq, dir)];
+                    init_col[r][c] = col;
+                    qv[r][c] = q;
+                    ans_st.insert((col, q, ncol, nq, dir));
+                } else {
+                    // q を調べる
+                    let mut ma = (0, 0); // (繰り返し回数, -q_col)
+                    let mut maq_v = vec![];
+                    for nowq in 0..=q_ma {
+                        if q_col[nowq] >= sz_c as usize - 1 {
+                            continue;
+                        }
+                        let mut update_v = vec![];
+                        let col = q_col[nowq];
+                        update_v.push((r, c, init_col[r][c], qv[r][c]));
+                        init_col[r][c] = col;
+                        qv[r][c] = nowq;
+                        let mut cnt = 0;
+                        let mut idx = i-1;
+                        while idx > 0 {
+                            let (dir, r, c, nr, nc) = ans[idx];
+                            let ncol = init_col[r][c];
+                            let nq = qv[nr][nc];
+                            if mp_rev.contains_key(&(ncol, nq, dir)) {
+                                let (col, q) = mp_rev[&(ncol, nq, dir)];
+                                update_v.push((r, c, init_col[r][c], qv[r][c]));
+                                init_col[r][c] = col;
+                                qv[r][c] = q;
+                                cnt += 1;
+                            } else {
+                                break;
+                            }
+                            idx -= 1;
+                        }
+
+                        for j in (0..update_v.len()).rev() {
+                            let (r, c, col, q) = update_v[j];
+                            init_col[r][c] = col;
+                            qv[r][c] = q;
+                        }
+
+                        if ma < (cnt, -(q_col[nowq] as i32)) {
+                            ma = (cnt, -(q_col[nowq] as i32));
+                            maq_v.clear();
+                            maq_v.push(nowq);
+                        } else if ma == (cnt, -(q_col[nowq] as i32)) {
+                            maq_v.push(nowq);
+                        }
+                    }
+                    // eprintln!("{} {}", i, macnt);
+
+                    let (col, q) = if ma.0 == 0 {
+                        while used_id.contains(&id) {
+                            id = next_cq2(id.0, id.1, sz_q as usize);
+                        }
+                        q_col[id.1] = id.0 + 1;
+                        q_ma = q_ma.max(id.1);
+                        id
+                    } else {
+                        let mut maq_idx = rng.rand_u32(0, maq_v.len() as u32-1) as usize;
+                        let maq = maq_v[maq_idx];
+                        q_col[maq] += 1;
+                        (q_col[maq] - 1, maq)
+                    };
+                    used_id.insert((col, q));
+
+
+                    mp.insert((col, q), (ncol, nq, dir));
+                    mp_rev.insert( (ncol, nq, dir), (col, q));
+                    init_col[r][c] = col;
+                    qv[r][c] = q;
+                    ans_st.insert((col, q, ncol, nq, dir));
+                }
+            }
+
+            let mut ans_c = 0;
+            let mut ans_q = 0;
+            for &(col, q, a, s, d) in &ans_st {
+                ans_c = ans_c.max(col);
+                ans_c = ans_c.max(a);
+                ans_q = ans_q.max(q);
+                ans_q = ans_q.max(s);
+            }
+            ans_c += 1;
+            ans_q += 1;
+
+            if score > ans_c + ans_q {
+                score = ans_c + ans_q;
+                ans_sz_c = ans_c;
+                ans_sz_q = ans_q;
+                ans_st_mi = ans_st;
+                init_col_mi = init_col;
+            }
+        }
+    }
+
+    eprintln!("{} {} {} : {} {} {}", sz_q_mi, ans_sz_q, sz_q_ma, sz_c_mi, ans_sz_c, sz_c_ma);
+
+    println!("{} {} {}", ans_sz_c, ans_sz_q, ans_st_mi.len());
     for i in 0..n {
         for j in 0..n {
-            print!("{}", init_col[i][j]);
+            print!("{}", init_col_mi[i][j]);
             if j == n-1 {
                 println!();
             } else {
@@ -194,11 +394,11 @@ fn main() {
         }
     }
 
-    for (col, q, a, s, d) in ans_st {
+    for (col, q, a, s, d) in ans_st_mi {
         println!("{} {} {} {} {}", col, q, a, s, d);
     }
 
-
+    // eprintln!("{:?}", start.elapsed())
 
 }
 
@@ -209,6 +409,7 @@ use std::collections::*;
 use std::io::{stdin, stdout, BufReader, Read, Stdin, Write};
 use std::str::FromStr;
 use std::{fmt, ops};
+use rand::Rng;
 
 /// 有名MODその1
 const MOD998: i64 = 998244353;
