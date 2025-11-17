@@ -122,6 +122,37 @@ fn next_cq2(mut c: usize, mut q: usize, sz_q: usize) -> (usize, usize) {
     (c, q)
 }
 
+#[derive(Debug, Clone)]
+struct State {
+    score: (usize, usize),
+    init_col: Vec<Vec<usize>>,
+    qv: Vec<Vec<usize>>,
+    mp: BTreeMap<(usize, usize), (usize, usize, char)>,
+    mp_rev: BTreeMap<(usize, usize, char), (usize, usize)>,
+    ans_st: BTreeSet<(usize, usize, usize, usize, char)>,
+    q_col: Vec<usize>,
+    q_ma: usize,
+    id: (usize, usize),
+    used_id: BTreeSet<(usize, usize)>,
+}
+
+impl State {
+    fn new(n: usize) -> Self {
+        State {
+            score: (usize::MAX, usize::MAX),
+            init_col: vec![],
+            qv: vec![],
+            mp: BTreeMap::new(),
+            mp_rev: BTreeMap::new(),
+            ans_st: BTreeSet::new(),
+            q_col: vec![],
+            q_ma: usize::MAX,
+            id: (usize::MAX, usize::MAX),
+            used_id: BTreeSet::new(),
+        }
+    }
+}
+
 fn main() {
     let start = Instant::now();
     // // AOJ, codeforces, etc...
@@ -146,7 +177,6 @@ fn main() {
     // col だけ圧縮 -> 19265
     // state も圧縮 -> 22620
     // q 探索 -> 提出:2870, ローカル:4588
-    // c, q の幅決め打ちして探索 -> 提出:2595, ローカル:4149
 
 
     let mut g = vec![vec![]; n*n];
@@ -244,10 +274,12 @@ fn main() {
     // let sz_q_mi = sz_q;
     // let sz_q_ma = sz_q;
 
-    let sz_c_mi = sz_c * 7 / 10;
-    let sz_c_ma = sz_c;
+    let sz_c_mi_mul = 7;
+    let sz_c_ma_mul = 8;
+    let sz_c_mi = sz_c * sz_c_mi_mul / 10;
+    let sz_c_ma = sz_c * sz_c_ma_mul / 10;
     let sz_q_mi = sz_q / 2;
-    let sz_q_ma = sz_q * 8 / 10;
+    let sz_q_ma = sz_q * 7 / 10;
 
     let mut score = usize::MAX;
     let mut ans_sz_c = 0;
@@ -255,165 +287,160 @@ fn main() {
     let mut ans_st_mi = BTreeSet::new();
     let mut init_col_mi = vec![];
     let mut rng = XorShift::new();
-    'outer: for sz_c in (sz_c_mi..=sz_c_ma).rev() {
+    'outer: for sz_c_mul in (sz_c_mi_mul..=sz_c_ma_mul).rev() {
+        let sz_c = sz_c * sz_c_mul / 10;
         for sz_q in sz_q_mi..=sz_q_ma {
-            if start.elapsed() >= std::time::Duration::from_millis(1970) {
+            if start.elapsed() >= std::time::Duration::from_millis(19700) {
                 break 'outer;
             }
-
-            // sz_c, sz_q を基準に、できるだけ使いまわせるように作り直す
-            let mut ans_st = BTreeSet::new();
-            let mut init_col = vec![vec![0; n]; n];
-
-            for i in 0..n {
-                for j in 0..n {
-                    let col = rng.rand_u32(0, sz_c as u32 - 2) as usize;
-                    init_col[i][j] = col;
-                }
-            }
-
-            let mut qv = vec![vec![0; n]; n];
-            let mut mp = BTreeMap::new(); // (c, q) -> (a, s, d);
-            let mut mp_rev = BTreeMap::new();
-            let mut q_col = vec![0; sz_q as usize];
-            q_col[0] = 1;
-            let mut q_ma = 0;
-
-            let mut id = (0, 1);
-            let mut used_id = BTreeSet::new();
+            let mut beam_width = 1;
+            let mut beam = vec![vec![State::new(n); beam_width]; ans.len() + 1];
+            beam[0][0] = State {
+                score: (0, 1),
+                init_col: vec![vec![0; n]; n],
+                qv: vec![vec![0; n]; n],
+                mp: BTreeMap::new(),
+                mp_rev: BTreeMap::new(),
+                ans_st: BTreeSet::new(),
+                q_col: vec![0; sz_q as usize],
+                q_ma: 0,
+                id: (0, 1),
+                used_id: BTreeSet::new(),
+            };
+            beam[0][0].q_col[0] = 1;
 
             for i in (0..ans.len()).rev() {
-                let (dir, r, c, nr, nc) = ans[i];
-                let ncol = init_col[r][c];
-                let nq = qv[nr][nc];
+                let beam_idx = ans.len() - i - 1;
+                // eprintln!("{:?}", beam[beam_idx][0].score);
+                // eprintln!();
+                for j in 0..beam_width {
+                    if beam[beam_idx][j].score.0 == usize::MAX {
+                        continue;
+                    }
+                    let (dir, r, c, nr, nc) = ans[i];
+                    let ncol = beam[beam_idx][j].init_col[r][c];
+                    let nq = beam[beam_idx][j].qv[nr][nc];
 
-                if i == 0 {
-                    // (0, 0) を使用
-                    ans_st.insert((0, 0, ncol, nq, dir));
-                    init_col[r][c] = 0;
-                } else if mp_rev.contains_key(&(ncol, nq, dir)) {
-                    let (col, q) = mp_rev[&(ncol, nq, dir)];
-                    init_col[r][c] = col;
-                    qv[r][c] = q;
-                    ans_st.insert((col, q, ncol, nq, dir));
-                } else {
-                    // q を調べる
-                    let mut ma = (0, 0, 0, 0); // (繰り返し回数, -q_col)
-                    let mut maq_v = vec![];
-                    for nowq in 0..=q_ma {
-                        if q_col[nowq] >= sz_c as usize {
-                            continue;
+                    if i == 0 {
+                        let mut state = beam[beam_idx][j].clone();
+                        state.ans_st.insert((0, 0, ncol, nq, dir));
+                        state.score = (state.score.0 + 1, state.q_col[0]);
+                        state.init_col[r][c] = 0;
+                        if beam[beam_idx+1][0].score > state.score {
+                            beam[beam_idx+1][0] = state;
+                        // } else if beam[beam_idx+1][1].score > state.score {
+                        //     beam[beam_idx+1][1] = state;
                         }
-                        let mut update_v = vec![];
-                        let col = q_col[nowq];
-                        q_col[nowq] += 1;
-                        update_v.push((r, c, init_col[r][c], qv[r][c]));
-                        init_col[r][c] = col;
-                        qv[r][c] = nowq;
-                        let mut cnt = 0;
-                        let mut idx = i-1;
-                        while idx > 0 {
-                            let (dir, r, c, nr, nc) = ans[idx];
-                            let ncol = init_col[r][c];
-                            let nq = qv[nr][nc];
-                            if mp_rev.contains_key(&(ncol, nq, dir)) {
-                                let (col, q) = mp_rev[&(ncol, nq, dir)];
-                                update_v.push((r, c, init_col[r][c], qv[r][c]));
-                                init_col[r][c] = col;
-                                qv[r][c] = q;
-                                cnt += 1;
-                            } else {
-                                break;
+                    } else if beam[beam_idx][j].mp_rev.contains_key(&(ncol, nq, dir)) {
+                        let mut state = beam[beam_idx][j].clone();
+                        let (col, q) = state.mp_rev[&(ncol, nq, dir)];
+                        state.init_col[r][c] = col;
+                        state.qv[r][c] = q;
+                        // state.ans_st.insert((col, q, ncol, nq, dir));
+                        if beam[beam_idx+1][0].score > state.score {
+                            beam[beam_idx+1][0] = state;
+                        // } else if beam[beam_idx+1][1].score > state.score {
+                        //     beam[beam_idx+1][1] = state;
+                        }
+                    } else {
+                        let mut  repeat = false;
+                        let mut state = beam[beam_idx][j].clone();
+                        for nowq in 0..=state.q_ma {
+                            if state.q_col[nowq] >= sz_c as usize - 1 {
+                                continue;
                             }
-                            idx -= 1;
-                        }
-
-                        // q の先を探索して、ma.0 には繰り返し回数の和を入れる
-                        let mut macnt = 0;
-                        if idx >= 2 {
-                            for nxtq in 0..q_ma {
-                                if q_col[nxtq] >= sz_c as usize {
-                                    continue;
-                                }
+                            let mut update_v = vec![];
+                            let mut update_ans = vec![];
+                            let col = state.q_col[nowq];
+                            state.q_col[nowq] += 1;
+                            update_v.push((r, c, state.init_col[r][c], state.qv[r][c]));
+                            update_ans.push((col, nowq, ncol, nq, dir));
+                            state.init_col[r][c] = col;
+                            state.qv[r][c] = nowq;
+                            state.used_id.insert((col, nowq));
+                            state.mp.insert((col, nowq), (ncol, nq, dir));
+                            state.mp_rev.insert((ncol, nq, dir), (col, nowq));
+                            state.ans_st.insert((col, nowq, ncol, nq, dir));
+                            let prev_score = state.score;
+                            state.score = (state.score.0 + 1, state.q_col[nowq]);
+                            let mut cnt = 0;
+                            let mut idx = i-1;
+                            while idx > 0 {
                                 let (dir, r, c, nr, nc) = ans[idx];
-                                let mut update_v = vec![];
-                                let col = q_col[nxtq];
-                                update_v.push((r, c, init_col[r][c], qv[r][c]));
-                                init_col[r][c] = col;
-                                qv[r][c] = nxtq;
-                                let mut cnt = 0;
-                                let mut nowidx = idx-1;
-                                while nowidx > 0 {
-                                    let (dir, r, c, nr, nc) = ans[nowidx];
-                                    let ncol = init_col[r][c];
-                                    let nq = qv[nr][nc];
-                                    if mp_rev.contains_key(&(ncol, nq, dir)) {
-                                        let (col, q) = mp_rev[&(ncol, nq, dir)];
-                                        update_v.push((r, c, init_col[r][c], qv[r][c]));
-                                        init_col[r][c] = col;
-                                        qv[r][c] = q;
-                                        cnt += 1;
-                                    } else {
-                                        break;
-                                    }
-                                    nowidx -= 1;
+                                let ncol = state.init_col[r][c];
+                                let nq = state.qv[nr][nc];
+                                if state.mp_rev.contains_key(&(ncol, nq, dir)) {
+                                    let (col, q) = state.mp_rev[&(ncol, nq, dir)];
+                                    update_v.push((r, c, state.init_col[r][c], state.qv[r][c]));
+                                    state.init_col[r][c] = col;
+                                    state.qv[r][c] = q;
+                                    cnt += 1;
+                                } else {
+                                    break;
                                 }
-
-                                for j in (0..update_v.len()).rev() {
-                                    let (r, c, col, q) = update_v[j];
-                                    init_col[r][c] = col;
-                                    qv[r][c] = q;
-                                }
-
-                                macnt = macnt.max(cnt);
+                                idx -= 1;
                             }
+                            if cnt > 0 {
+                                repeat = true;
+                            }
+
+                            // beam 更新
+                            let beam_nidx = ans.len() - idx - 1;
+                            if beam[beam_nidx][0].score > state.score {
+                                beam[beam_nidx][0] = state.clone();
+                            } else if beam[beam_nidx][0].score == state.score {
+                                let p = rng.rand_double(0.0, 0.1);
+                                if p < 0.5 {
+                                    beam[beam_nidx][0] = state.clone();
+                                }
+                            }
+
+                            for j in (0..update_v.len()).rev() {
+                                let (r, c, col, q) = update_v[j];
+                                state.init_col[r][c] = col;
+                                state.qv[r][c] = q;
+                            }
+
+                            for j in (0..update_ans.len()).rev() {
+                                let (col, nowq, ncol, nq, dir) = update_ans[j];
+                                state.used_id.remove(&(col, nowq));
+                                state.mp.remove(&(col, nowq));
+                                state.mp_rev.remove(&(ncol, nq, dir));
+                                state.ans_st.remove(&(col, nowq, ncol, nq, dir));
+                            }
+                            state.score = prev_score;
+
+                            state.q_col[nowq] -= 1;
+
                         }
 
-                        for j in (0..update_v.len()).rev() {
-                            let (r, c, col, q) = update_v[j];
-                            init_col[r][c] = col;
-                            qv[r][c] = q;
-                        }
+                        // 新 id を使用
+                        if !repeat {
+                            while state.used_id.contains(&state.id) {
+                                state.id = next_cq2(state.id.0, state.id.1, sz_q as usize);
+                            }
+                            state.q_col[state.id.1] = state.id.0 + 1;
+                            state.q_ma = state.q_ma.max(state.id.1);
+                            let (col, q) = state.id;
+                            state.used_id.insert((col, q));
+                            state.mp.insert((col, q), (ncol, nq, dir));
+                            state.mp_rev.insert((ncol, nq, dir), (col, q));
+                            state.init_col[r][c] = col;
+                            state.qv[r][c] = q;
+                            state.ans_st.insert((col, q, ncol, nq, dir));
+                            state.score = (state.score.0 + 1, state.q_col[state.id.1]);
 
-                        q_col[nowq] -= 1;
-
-                        if ma < (cnt + macnt, -(q_col[nowq] as i32), cnt, macnt) {
-                            ma = (cnt + macnt, -(q_col[nowq] as i32), cnt, macnt);
-                            maq_v.clear();
-                            maq_v.push(nowq);
-                        } else if ma == (cnt + macnt, -(q_col[nowq] as i32), cnt, macnt) {
-                            maq_v.push(nowq);
+                            if beam[beam_idx + 1][0].score > state.score {
+                                beam[beam_idx+1][0] = state;
+                            }
                         }
                     }
-                    // eprintln!("{} {:?} {:?}", i, ma, maq_v);
-
-                    let (col, q) = if ma.0 == 0 {
-                        while used_id.contains(&id) {
-                            id = next_cq2(id.0, id.1, sz_q as usize);
-                        }
-                        q_col[id.1] = id.0 + 1;
-                        q_ma = q_ma.max(id.1);
-                        id
-                    } else {
-                        let mut maq_idx = rng.rand_u32(0, maq_v.len() as u32-1) as usize;
-                        let maq = maq_v[maq_idx];
-                        q_col[maq] += 1;
-                        (q_col[maq] - 1, maq)
-                    };
-                    used_id.insert((col, q));
-
-
-                    mp.insert((col, q), (ncol, nq, dir));
-                    mp_rev.insert( (ncol, nq, dir), (col, q));
-                    init_col[r][c] = col;
-                    qv[r][c] = q;
-                    ans_st.insert((col, q, ncol, nq, dir));
                 }
             }
 
             let mut ans_c = 0;
             let mut ans_q = 0;
-            for &(col, q, a, s, d) in &ans_st {
+            for &(col, q, a, s, d) in &beam[beam.len()-1][0].ans_st {
                 ans_c = ans_c.max(col);
                 ans_c = ans_c.max(a);
                 ans_q = ans_q.max(q);
@@ -421,18 +448,152 @@ fn main() {
             }
             ans_c += 1;
             ans_q += 1;
-
             if score > ans_c + ans_q {
-                score = ans_c + ans_q;
                 ans_sz_c = ans_c;
                 ans_sz_q = ans_q;
-                ans_st_mi = ans_st;
-                init_col_mi = init_col;
+                ans_st_mi = beam[beam.len()-1][0].ans_st.clone();
+                init_col_mi = beam[beam.len()-1][0].init_col.clone();
             }
+
         }
     }
 
-    eprintln!("{} {} {} : {} {} {}", sz_q_mi, ans_sz_q, sz_q_ma, sz_c_mi, ans_sz_c, sz_c_ma);
+
+
+    // let mut score = usize::MAX;
+    // let mut ans_sz_c = 0;
+    // let mut ans_sz_q = 0;
+    // let mut ans_st_mi = BTreeSet::new();
+    // let mut init_col_mi = vec![];
+    // let mut rng = XorShift::new();
+    // 'outer: for sz_c in (sz_c_mi..=sz_c_ma).rev() {
+    //     for sz_q in sz_q_mi..=sz_q_ma {
+    //         if start.elapsed() >= std::time::Duration::from_millis(1970) {
+    //             break 'outer;
+    //         }
+
+    //         // sz_c, sz_q を基準に、できるだけ使いまわせるように作り直す
+    //         let mut ans_st = BTreeSet::new();
+    //         let mut init_col = vec![vec![0; n]; n];
+    //         let mut qv = vec![vec![0; n]; n];
+    //         let mut mp = BTreeMap::new(); // (c, q) -> (a, s, d);
+    //         let mut mp_rev = BTreeMap::new();
+    //         let mut q_col = vec![0; sz_q as usize];
+    //         q_col[0] = 1;
+    //         let mut q_ma = 0;
+
+    //         let mut id = (0, 1);
+    //         let mut used_id = BTreeSet::new();
+
+
+    //         for i in (0..ans.len()).rev() {
+    //             let (dir, r, c, nr, nc) = ans[i];
+    //             let ncol = init_col[r][c];
+    //             let nq = qv[nr][nc];
+
+    //             if i == 0 {
+    //                 // (0, 0) を使用
+    //                 ans_st.insert((0, 0, ncol, nq, dir));
+    //                 init_col[r][c] = 0;
+    //             } else if mp_rev.contains_key(&(ncol, nq, dir)) {
+    //                 let (col, q) = mp_rev[&(ncol, nq, dir)];
+    //                 init_col[r][c] = col;
+    //                 qv[r][c] = q;
+    //                 ans_st.insert((col, q, ncol, nq, dir));
+    //             } else {
+    //                 // q を調べる
+    //                 let mut ma = (0, 0); // (繰り返し回数, -q_col)
+    //                 let mut maq_v = vec![];
+    //                 for nowq in 0..=q_ma {
+    //                     if q_col[nowq] >= sz_c as usize - 1 {
+    //                         continue;
+    //                     }
+    //                     let mut update_v = vec![];
+    //                     let col = q_col[nowq];
+    //                     update_v.push((r, c, init_col[r][c], qv[r][c]));
+    //                     init_col[r][c] = col;
+    //                     qv[r][c] = nowq;
+    //                     let mut cnt = 0;
+    //                     let mut idx = i-1;
+    //                     while idx > 0 {
+    //                         let (dir, r, c, nr, nc) = ans[idx];
+    //                         let ncol = init_col[r][c];
+    //                         let nq = qv[nr][nc];
+    //                         if mp_rev.contains_key(&(ncol, nq, dir)) {
+    //                             let (col, q) = mp_rev[&(ncol, nq, dir)];
+    //                             update_v.push((r, c, init_col[r][c], qv[r][c]));
+    //                             init_col[r][c] = col;
+    //                             qv[r][c] = q;
+    //                             cnt += 1;
+    //                         } else {
+    //                             break;
+    //                         }
+    //                         idx -= 1;
+    //                     }
+
+    //                     for j in (0..update_v.len()).rev() {
+    //                         let (r, c, col, q) = update_v[j];
+    //                         init_col[r][c] = col;
+    //                         qv[r][c] = q;
+    //                     }
+
+    //                     if ma < (cnt, -(q_col[nowq] as i32)) {
+    //                         ma = (cnt, -(q_col[nowq] as i32));
+    //                         maq_v.clear();
+    //                         maq_v.push(nowq);
+    //                     } else if ma == (cnt, -(q_col[nowq] as i32)) {
+    //                         maq_v.push(nowq);
+    //                     }
+    //                 }
+    //                 // eprintln!("{} {}", i, macnt);
+
+    //                 let (col, q) = if ma.0 == 0 {
+    //                     while used_id.contains(&id) {
+    //                         id = next_cq2(id.0, id.1, sz_q as usize);
+    //                     }
+    //                     q_col[id.1] = id.0 + 1;
+    //                     q_ma = q_ma.max(id.1);
+    //                     id
+    //                 } else {
+    //                     let mut maq_idx = rng.rand_u32(0, maq_v.len() as u32-1) as usize;
+    //                     let maq = maq_v[maq_idx];
+    //                     q_col[maq] += 1;
+    //                     (q_col[maq] - 1, maq)
+    //                 };
+    //                 used_id.insert((col, q));
+
+
+    //                 mp.insert((col, q), (ncol, nq, dir));
+    //                 mp_rev.insert( (ncol, nq, dir), (col, q));
+    //                 init_col[r][c] = col;
+    //                 qv[r][c] = q;
+    //                 ans_st.insert((col, q, ncol, nq, dir));
+    //             }
+    //         }
+
+    //         let mut ans_c = 0;
+    //         let mut ans_q = 0;
+    //         for &(col, q, a, s, d) in &ans_st {
+    //             ans_c = ans_c.max(col);
+    //             ans_c = ans_c.max(a);
+    //             ans_q = ans_q.max(q);
+    //             ans_q = ans_q.max(s);
+    //         }
+    //         ans_c += 1;
+    //         ans_q += 1;
+
+    //         if score > ans_c + ans_q {
+    //             score = ans_c + ans_q;
+    //             ans_sz_c = ans_c;
+    //             ans_sz_q = ans_q;
+    //             ans_st_mi = ans_st;
+    //             init_col_mi = init_col;
+    //         }
+    //     }
+    // }
+
+    // eprintln!("{} {} {} : {} {} {}", sz_q_mi, ans_sz_q, sz_q_ma, sz_c_mi, ans_sz_c, sz_c_ma);
+
 
     println!("{} {} {}", ans_sz_c, ans_sz_q, ans_st_mi.len());
     for i in 0..n {
@@ -450,7 +611,7 @@ fn main() {
         println!("{} {} {} {} {}", col, q, a, s, d);
     }
 
-    // eprintln!("{:?}", start.elapsed())
+    eprintln!("{:?}", start.elapsed())
 
 }
 

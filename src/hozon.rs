@@ -254,9 +254,12 @@ fn main() {
     let mut ans_sz_q = 0;
     let mut ans_st_mi = BTreeSet::new();
     let mut init_col_mi = vec![];
-    let mut rng = XorShift::new();
+    let mut rng = XorShift::from_seed(3895438);
+
+    // eprintln!("{} {} {} {}", sz_c_mi, sz_c_ma, sz_q_mi, sz_q_ma);
     'outer: for sz_c in (sz_c_mi..=sz_c_ma).rev() {
         for sz_q in sz_q_mi..=sz_q_ma {
+            // eprintln!("{} {}", sz_c, sz_q);
             if start.elapsed() >= std::time::Duration::from_millis(1970) {
                 break 'outer;
             }
@@ -265,12 +268,12 @@ fn main() {
             let mut ans_st = BTreeSet::new();
             let mut init_col = vec![vec![0; n]; n];
 
-            for i in 0..n {
-                for j in 0..n {
-                    let col = rng.rand_u32(0, sz_c as u32 - 2) as usize;
-                    init_col[i][j] = col;
-                }
-            }
+            // for i in 0..n {
+            //     for j in 0..n {
+            //         let col = rng.rand_u32(0, sz_c as u32 - 2) as usize;
+            //         init_col[i][j] = col;
+            //     }
+            // }
 
             let mut qv = vec![vec![0; n]; n];
             let mut mp = BTreeMap::new(); // (c, q) -> (a, s, d);
@@ -330,7 +333,7 @@ fn main() {
 
                         // q の先を探索して、ma.0 には繰り返し回数の和を入れる
                         let mut macnt = 0;
-                        if idx >= 2 {
+                        if n < 16 && idx >= 2 {
                             for nxtq in 0..q_ma {
                                 if q_col[nxtq] >= sz_c as usize {
                                     continue;
@@ -384,8 +387,9 @@ fn main() {
                         } else if ma == (cnt + macnt, -(q_col[nowq] as i32), cnt, macnt) {
                             maq_v.push(nowq);
                         }
+
                     }
-                    // eprintln!("{} {:?} {:?}", i, ma, maq_v);
+                    eprintln!("{} {:?} {:?}", i, ma, maq_v);
 
                     let (col, q) = if ma.0 == 0 {
                         while used_id.contains(&id) {
