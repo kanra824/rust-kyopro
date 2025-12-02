@@ -19,6 +19,7 @@ fn main() {
             s[2].push(0);
         }
         for i in 0..z-x {
+            s[1].push(0);
             s[2].push(0);
         }
 
