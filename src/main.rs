@@ -1,21 +1,71 @@
 #![allow(unused)]
 
-fn main() {
-    // // AOJ, codeforces, etc...
-    // let mut s = String::new();
-    // let stdin = stdin();
-    // let mut reader = Reader::new(&mut s, stdin);
+fn solve() {
+    input! {
+        // from &mut source,
+        mut a: [i64; 9],
+    }
 
+    a.insert(0, 0);
+
+    if a[5] == 0 {
+        let mut st = BTreeSet::new();
+        for i in 1..=9 {
+            if a[i] > 0 {
+                st.insert(i);
+            }
+        }
+        if st.len() == 2 {
+            let mut v = vec![];
+            for e in st {
+                v.push(e);
+            }
+
+            if v[0] == 1 && v[1] == 9
+                || v[0] == 2 && v[1] == 8
+                || v[0] == 3 && v[1] == 7
+                || v[0] == 4 && v[1] == 6 {
+
+                pr(a[v[0]].min(a[v[1]]));
+            } else {
+                pr(0);
+            }
+        } else {
+            pr(0);
+        }
+    } else {
+        let mut cnt = 0;
+        for i in 1..=9 {
+            if i == 5 {
+                continue;
+            }
+            cnt += a[i];
+        }
+
+        if cnt >= a[5] - 1 {
+            pr(0);
+        } else {
+            pr(a[5] - 1 - cnt);
+        }
+    }
+}
+
+fn main() {
     // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
-        // from &mut source,
+        t: usize,
+    }
+
+    for _ in 0..t {
+        solve();
     }
 }
 
 use proconio::marker::{Chars, Isize1, Usize1};
 use proconio::{input, source::line::LineSource};
+
 use std::cmp::{max, min};
 use std::collections::*;
 use std::io::{stdin, stdout, BufReader, Read, Stdin, Write};

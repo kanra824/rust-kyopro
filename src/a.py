@@ -1,15 +1,14 @@
 import random
 
-n = 200000
+print(1)
+n = 1000000 // 50
 print(n)
-for i in range(3):
-    for j in range(n):
-        print('.', end="")
-    print()
 
-q = 200000
-print(q)
-for i in range(q):
-    r = random.randint(1, 3)
-    c = random.randint(1, n)
-    print(r, c)
+s = []
+for i in range(n):
+    len = random.randint(1, 100)
+    nows = []
+    for j in range(len):
+        c = ord('a') + random.randint(0, 25)
+        print(chr(c), end="")
+    print()
