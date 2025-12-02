@@ -36,6 +36,9 @@ fn main() {
             s[2].push(1);
         }
     } else {
+        for i in 0..z {
+            s[1].push(1);
+        }
         for i in 0..x {
             if i <= 1 {
                 s[0].push(1);
@@ -55,7 +58,6 @@ fn main() {
             }
         }
         for i in 0..z {
-            s[1].push(1);
             s[2].push(1);
         }
     }
