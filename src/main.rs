@@ -1,65 +1,70 @@
 #![allow(unused)]
 
-fn solve() {
-    input! {
-        // from &mut source,
-        mut a: [i64; 9],
-    }
-
-    a.insert(0, 0);
-
-    if a[5] == 0 {
-        let mut st = BTreeSet::new();
-        for i in 1..=9 {
-            if a[i] > 0 {
-                st.insert(i);
-            }
-        }
-        if st.len() == 2 {
-            let mut v = vec![];
-            for e in st {
-                v.push(e);
-            }
-
-            if v[0] == 1 && v[1] == 9
-                || v[0] == 2 && v[1] == 8
-                || v[0] == 3 && v[1] == 7
-                || v[0] == 4 && v[1] == 6 {
-
-                pr(1);
-            } else {
-                pr(0);
-            }
-        } else {
-            pr(0);
-        }
-    } else {
-        let mut cnt = 0;
-        for i in 1..=9 {
-            if i == 5 {
-                continue;
-            }
-            cnt += a[i];
-        }
-
-        if cnt >= a[5] - 1 {
-            pr(0);
-        } else {
-            pr(a[5] - 1 - cnt);
-        }
-    }
-}
-
 fn main() {
     // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
-        t: usize,
+        // from &mut source,
+        x: usize,
+        y: usize,
+        z: usize,
     }
 
-    for _ in 0..t {
-        solve();
+    let mut s = vec![vec![]; 3];
+    if x == y {
+        for i in 0..x {
+            s[0].push(0);
+            s[1].push(0);
+            s[2].push(0);
+        }
+        for i in 0..z-x {
+            s[2].push(0);
+        }
+
+    } else if x <= 2 {
+        for i in 0..x {
+            s[0].push(1);
+            s[1].push(1);
+        }
+        for i in 0..y {
+            s[0].push(0);
+            s[2].push(0);
+        }
+        for i in 0..z {
+            s[1].push(1);
+            s[2].push(1);
+        }
+    } else {
+        for i in 0..x {
+            if i <= 1 {
+                s[0].push(1);
+                s[1].push(1);
+            } else {
+                s[0].push(0);
+                s[1].push(0);
+            }
+        }
+        for i in 0..y {
+            if i == 0 {
+                s[0].push(1);
+                s[2].push(1);
+            } else {
+                s[0].push(0);
+                s[2].push(0);
+            }
+        }
+        for i in 0..z {
+            s[1].push(1);
+            s[2].push(1);
+        }
+    }
+    for i in 0..3 {
+        print!("{}", s[i].len());
+        for &e in &s[i] {
+            print!(" {}", e);
+        }
+        println!();
     }
 }
 
