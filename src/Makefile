@@ -12,3 +12,9 @@ aoj:
 codeforces:
 	cp ../template/codeforces.rs ./main.rs
 	cat ../template/template.rs >> ./main.rs
+
+.PHONY: interactive
+interactive:
+	cp ../template/interactive.rs ./main.rs
+	cat ../template/template.rs >> ./main.rs
+
