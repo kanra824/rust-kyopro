@@ -1,4 +1,8 @@
 use crate::library::number::mint::*;
+use std::sync::OnceLock;
+
+static POWV: OnceLock<Vec<Modint>> = OnceLock::new();
+static INVPOWV: OnceLock<Vec<Modint>> = OnceLock::new();
 
 fn calc_powv() -> Vec<Modint> {
     let mut res = vec![];
@@ -20,6 +24,14 @@ fn calc_invpowv() -> Vec<Modint> {
     }
     res.reverse();
     res
+}
+
+fn get_powv() -> &'static Vec<Modint> {
+    POWV.get_or_init(calc_powv)
+}
+
+fn get_invpowv() -> &'static Vec<Modint> {
+    INVPOWV.get_or_init(calc_invpowv)
 }
 
 fn ntt(a: &Vec<Modint>, depth: i64, root: &Vec<Modint>) -> Vec<Modint> {
@@ -53,6 +65,57 @@ fn ntt(a: &Vec<Modint>, depth: i64, root: &Vec<Modint>) -> Vec<Modint> {
     res
 }
 
+// Butterfly NTT（反復的な実装、最適化版）
+fn butterfly_ntt(a: &mut Vec<Modint>, root: &Vec<Modint>) {
+    let n = a.len();
+    if n == 1 {
+        return;
+    }
+
+    let log2n = n.trailing_zeros() as usize;
+
+    // ビット反転によるデータの並び替え（最適化版）
+    let mut j = 0;
+    for i in 1..n {
+        let mut bit = n >> 1;
+        while j & bit != 0 {
+            j ^= bit;
+            bit >>= 1;
+        }
+        j ^= bit;
+        if i < j {
+            a.swap(i, j);
+        }
+    }
+
+    // 回転因子を事前計算
+    let mut twiddles = vec![vec![Modint::new(1); 1]; log2n];
+    for h in 0..log2n {
+        let len = 1 << (h + 1);
+        let r = root[h];
+        twiddles[h].resize(len / 2, Modint::new(1));
+        for k in 1..(len / 2) {
+            twiddles[h][k] = twiddles[h][k - 1] * r;
+        }
+    }
+
+    // Butterfly演算
+    for h in 0..log2n {
+        let len = 1 << (h + 1);
+        let half = len / 2;
+        let tw = &twiddles[h];
+        
+        for i in (0..n).step_by(len) {
+            for j in 0..half {
+                let u = a[i + j];
+                let v = a[i + j + half] * tw[j];
+                a[i + j] = u + v;
+                a[i + j + half] = u - v;
+            }
+        }
+    }
+}
+
 pub fn convolution(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
     let sza = a.len();
     let szb = b.len();
@@ -61,35 +124,63 @@ pub fn convolution(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
         n *= 2;
     }
 
-    while a.len() < n {
-        a.push(Modint::zero());
-    }
-    while b.len() < n {
-        b.push(Modint::zero());
-    }
+    a.resize(n, Modint::zero());
+    b.resize(n, Modint::zero());
 
     let mut log_2n = 1;
     while 1<<log_2n < n {
         log_2n += 1;
     }
 
-    let powv = calc_powv();
-    let invpowv = calc_invpowv();
+    let powv = get_powv();
+    let invpowv = get_invpowv();
 
-    let da = ntt(&a, log_2n - 1, &powv);
-    let db = ntt(&b, log_2n - 1, &powv);
+    let da = ntt(&a, log_2n - 1, powv);
+    let db = ntt(&b, log_2n - 1, powv);
 
     let mut dc = vec![];
     for i in 0..n {
         dc.push(da[i] * db[i]);
     }
 
-    let c = ntt(&dc, log_2n - 1, &invpowv);
+    let c = ntt(&dc, log_2n - 1, invpowv);
 
-    let mut res = vec![];
     let ninv = Modint::new(n as i64).inv();
+    let mut res = Vec::with_capacity(sza + szb - 1);
     for i in 0..sza + szb - 1 {
         res.push(c[i] * ninv);
     }
     res
+}
+
+pub fn convolution_butterfly(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
+    let sza = a.len();
+    let szb = b.len();
+    let mut n = 1;
+    while n <= sza + szb - 1 {
+        n *= 2;
+    }
+
+    a.resize(n, Modint::zero());
+    b.resize(n, Modint::zero());
+
+    let powv = get_powv();
+    let invpowv = get_invpowv();
+
+    butterfly_ntt(&mut a, powv);
+    butterfly_ntt(&mut b, powv);
+
+    // 要素ごとの乗算を最適化
+    for i in 0..n {
+        a[i] = a[i] * b[i];
+    }
+
+    butterfly_ntt(&mut a, invpowv);
+
+    let ninv = Modint::new(n as i64).inv();
+    a.truncate(sza + szb - 1);
+    for i in 0..(sza + szb - 1) {
+        a[i] = a[i] * ninv;
+    }
+    a
 }

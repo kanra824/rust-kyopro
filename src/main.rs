@@ -1,20 +1,40 @@
 #![allow(unused)]
 
 fn main() {
-    // // interactive
-    // let stdin = stdin();
-    // let mut source = LineSource::new(BufReader::new(stdin.lock()));
-    input! {
-        // from &mut source,
+    let mut s = String::new();
+    let stdin = stdin();
+    let mut re = Reader::new(&mut s, stdin);
+
+    let n: usize = re.r();
+    let m: usize = re.r();
+    let a_in: Vec<i64> = re.rv();
+    let b_in: Vec<i64> = re.rv();
+
+    let mut a = vec![];
+    for i in 0..n {
+        a.push(Modint::new(a_in[i]));
     }
+    let mut b = vec![];
+    for i in 0..m {
+        b.push(Modint::new(b_in[i]));
+    }
+
+    let c = convolution_butterfly(a, b);
+
+    let mut ans = Modint::zero();
+    for (i, e) in c.iter().enumerate() {
+        if i != 0 {
+            print!(" ");
+        }
+        print!("{}", e);
+    }
+    println!();
 }
 
-mod tests;
 mod library;
+use library::number::mint::*;
+use library::number::ntt::*;
 
-
-use proconio::marker::{Chars, Isize1, Usize1};
-use proconio::{input, source::line::LineSource};
 
 use std::cmp::{max, min};
 use std::collections::*;
