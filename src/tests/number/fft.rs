@@ -28,3 +28,46 @@ fn test_butterfly() {
     }
     assert!(diff < 10e-8);
 }
+
+#[test]
+fn test_butterfly_large() {
+    let n = 100000;
+    let mut a = vec![0.0; n];
+    let mut b = vec![0.0; n];
+    
+    // aとbに値を設定
+    for i in 0..n {
+        a[i] = (i % 10) as f64;
+        b[i] = ((i + 1) % 10) as f64;
+    }
+    
+    // convolution_butterfly でたたみ込みを計算
+    let c = convolution_butterfly(&a, &b);
+    
+    // ナイーブな方法で検証用の結果を計算（最初と最後のいくつかの要素のみ）
+    let verify_count = 10;
+    for idx in 0..verify_count {
+        let mut expected = 0.0;
+        for i in 0..n {
+            if idx >= i && idx - i < n {
+                expected += a[i] * b[idx - i];
+            }
+        }
+        let diff = (c[idx] - expected).abs();
+        assert!(diff < 1e-6, "Mismatch at index {}: {} vs {}", idx, c[idx], expected);
+    }
+    
+    // 末尾付近も検証
+    for idx in (c.len() - verify_count)..c.len() {
+        let mut expected = 0.0;
+        for i in 0..n {
+            if idx >= i && idx - i < n {
+                expected += a[i] * b[idx - i];
+            }
+        }
+        let diff = (c[idx] - expected).abs();
+        assert!(diff < 1e-6, "Mismatch at index {}: {} vs {}", idx, c[idx], expected);
+    }
+    
+    eprintln!("Test passed for n={}, result length={}", n, c.len());
+}

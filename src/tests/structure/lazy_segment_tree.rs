@@ -15,13 +15,13 @@ fn test_add_sum() {
     let mut v: Vec<i64> = (0..n as i64).collect();
     st.build(&v);
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for _ in 0..100 {
-        let t = rng.gen_bool(1.0 / 3.0);
-        let l = rng.gen_range(0..n);
-        let r = rng.gen_range(l + 1..=n);
+        let t = rng.random_bool(1.0 / 3.0);
+        let l = rng.random_range(0..n);
+        let r = rng.random_range(l + 1..=n);
         if t {
-            let x = rng.gen_range(-100000..100000);
+            let x = rng.random_range(-100000..100000);
             for i in l..r {
                 v[i] += x;
             }
@@ -52,13 +52,13 @@ fn test_update_sum() {
     let mut v: Vec<i64> = (0..n as i64).collect();
     st.build(&v);
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for _ in 0..q {
-        let t = rng.gen_bool(1.0 / 2.0);
-        let l = rng.gen_range(0..n);
-        let r = rng.gen_range(l + 1..=n);
+        let t = rng.random_bool(1.0 / 2.0);
+        let l = rng.random_range(0..n);
+        let r = rng.random_range(l + 1..=n);
         if t {
-            let x = rng.gen_range(-100000..100000);
+            let x = rng.random_range(-100000..100000);
             for i in l..r {
                 v[i] = x;
             }
@@ -91,13 +91,13 @@ fn test_add_min() {
     let mut v: Vec<i64> = (0..n as i64).collect();
     st.build(&v);
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for _ in 0..q {
-        let t = rng.gen_bool(1.0 / 3.0);
-        let l = rng.gen_range(0..n);
-        let r = rng.gen_range(l + 1..=n);
+        let t = rng.random_bool(1.0 / 3.0);
+        let l = rng.random_range(0..n);
+        let r = rng.random_range(l + 1..=n);
         if t {
-            let x = rng.gen_range(-100000..100000);
+            let x = rng.random_range(-100000..100000);
             for i in l..r {
                 v[i] += x;
             }

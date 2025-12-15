@@ -1,4 +1,5 @@
 pub mod lazy_segment_tree;
+pub mod range_set;
 pub mod segment_tree;
 pub mod segment_tree_ref;
 pub mod segment_tree_beats;

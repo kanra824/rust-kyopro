@@ -5,11 +5,11 @@ use rand::{self, Rng};
 fn random_test() {
     let charset = "abcdefghijklmnopqrstuvwxyz".chars().collect::<Vec<char>>();
 
-    let mut rng = rand::thread_rng();
-    let n: usize = rng.gen_range(2..100000);
+    let mut rng = rand::rng();
+    let n: usize = rng.random_range(2..100000);
     let test_str: Vec<char> = (0..n)
         .map(|_| {
-            let idx = rng.gen_range(0..charset.len());
+            let idx = rng.random_range(0..charset.len());
             charset[idx]
         })
         .collect();
@@ -17,8 +17,8 @@ fn random_test() {
     let rh = RollingHash::new(&test_str);
 
     for i in 0..100 {
-        let l = rng.gen_range(0..n - 1);
-        let r = rng.gen_range(l + 1..n);
+        let l = rng.random_range(0..n - 1);
+        let r = rng.random_range(l + 1..n);
         let mut s = vec![];
         for i in l..r {
             s.push(test_str[i]);

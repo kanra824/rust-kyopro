@@ -14,11 +14,11 @@ fn test_zero() {
 
 #[test]
 fn test_pow() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for i in 0..100 {
-        let x = rng.gen_range(0..i64::MAX);
+        let x = rng.random_range(0..i64::MAX);
         let mut mul = 1;
-        let mut k = rng.gen_range(0..1000);
+        let mut k = rng.random_range(0..1000);
         for _ in 0..k {
             mul = mul * (x % MOD998) % MOD998;
         }

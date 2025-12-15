@@ -1,4 +1,4 @@
-use crate::library::number::mint::{MOD, Modint};
+use crate::library::number::mint::*;
 
 fn calc_powv() -> Vec<Modint> {
     let mut res = vec![];

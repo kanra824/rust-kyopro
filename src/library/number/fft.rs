@@ -1,5 +1,4 @@
 use num_complex::Complex64;
-
 use std::f64::consts::PI;
 
 // inv = 1.0 なら FFT
