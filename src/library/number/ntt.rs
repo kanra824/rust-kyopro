@@ -127,43 +127,6 @@ pub fn convolution(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
     a.resize(n, Modint::zero());
     b.resize(n, Modint::zero());
 
-    let mut log_2n = 1;
-    while 1<<log_2n < n {
-        log_2n += 1;
-    }
-
-    let powv = get_powv();
-    let invpowv = get_invpowv();
-
-    let da = ntt(&a, log_2n - 1, powv);
-    let db = ntt(&b, log_2n - 1, powv);
-
-    let mut dc = vec![];
-    for i in 0..n {
-        dc.push(da[i] * db[i]);
-    }
-
-    let c = ntt(&dc, log_2n - 1, invpowv);
-
-    let ninv = Modint::new(n as i64).inv();
-    let mut res = Vec::with_capacity(sza + szb - 1);
-    for i in 0..sza + szb - 1 {
-        res.push(c[i] * ninv);
-    }
-    res
-}
-
-pub fn convolution_butterfly(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
-    let sza = a.len();
-    let szb = b.len();
-    let mut n = 1;
-    while n <= sza + szb - 1 {
-        n *= 2;
-    }
-
-    a.resize(n, Modint::zero());
-    b.resize(n, Modint::zero());
-
     let powv = get_powv();
     let invpowv = get_invpowv();
 

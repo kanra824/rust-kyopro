@@ -28,7 +28,7 @@ fn test_convolution_large() {
     }
     
     // Butterfly NTTでたたみ込みを計算
-    let c = convolution_butterfly(a.clone(), b.clone());
+    let c = convolution(a.clone(), b.clone());
     
     // 結果の長さを確認
     assert_eq!(c.len(), 2 * n - 1);

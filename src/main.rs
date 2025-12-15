@@ -19,7 +19,7 @@ fn main() {
         b.push(Modint::new(b_in[i]));
     }
 
-    let c = convolution_butterfly(a, b);
+    let c = convolution(a, b);
 
     let mut ans = Modint::zero();
     for (i, e) in c.iter().enumerate() {
