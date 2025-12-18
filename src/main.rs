@@ -1,39 +1,23 @@
 #![allow(unused)]
 
+
 fn main() {
     let mut s = String::new();
     let stdin = stdin();
     let mut re = Reader::new(&mut s, stdin);
-
+    
     let n: usize = re.r();
-    let m: usize = re.r();
-    let a_in: Vec<i64> = re.rv();
-    let b_in: Vec<i64> = re.rv();
+    let a: Vec<i64> = re.rv();
 
-    let mut a = vec![];
+    let a = Fps::from_i64_vec(a);
+    let b = a.inv(n);
     for i in 0..n {
-        a.push(Modint::new(a_in[i]));
+        print!(" {}", b.a[i])
     }
-    let mut b = vec![];
-    for i in 0..m {
-        b.push(Modint::new(b_in[i]));
-    }
-
-    let c = convolution(a, b);
-
-    let mut ans = Modint::zero();
-    for (i, e) in c.iter().enumerate() {
-        if i != 0 {
-            print!(" ");
-        }
-        print!("{}", e);
-    }
-    println!();
 }
 
 mod library;
-use library::number::mint::*;
-use library::number::ntt::*;
+use library::fps::fps::*;
 
 
 use std::cmp::{max, min};

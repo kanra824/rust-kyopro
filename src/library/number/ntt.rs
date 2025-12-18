@@ -1,4 +1,4 @@
-use crate::library::number::mint::*;
+use crate::library::number::mint::{Modint, MOD};
 use std::sync::OnceLock;
 
 static POWV: OnceLock<Vec<Modint>> = OnceLock::new();

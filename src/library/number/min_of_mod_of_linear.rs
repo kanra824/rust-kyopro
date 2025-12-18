@@ -1,10 +1,4 @@
-pub fn gcd(a: i64, b: i64) -> i64 {
-    if b == 0 {
-        a
-    } else {
-        gcd(b, a % b)
-    }
-}
+use super::gcd::*;
 
 pub fn ceil(x: i64, y: i64) -> i64 {
     if x > 0 {
