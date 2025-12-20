@@ -1,5 +1,5 @@
-use crate::library::number::{mint::Modint, ntt::convolution};
 use crate::library::number::combination::*;
+use crate::library::number::{mint::Modint, ntt::convolution};
 
 #[derive(Clone, Debug)]
 pub struct Fps {
@@ -19,10 +19,7 @@ impl Fps {
     }
 
     pub fn from_mint_vec(a: Vec<Modint>) -> Self {
-        Fps {
-            n: a.len(),
-            a
-        }
+        Fps { n: a.len(), a }
     }
 
     pub fn from_i64_vec(a_in: Vec<i64>) -> Self {
@@ -30,10 +27,7 @@ impl Fps {
         for i in 0..a_in.len() {
             a.push(Modint::new(a_in[i]));
         }
-        Fps {
-            n: a.len(),
-            a
-        }
+        Fps { n: a.len(), a }
     }
 
     pub fn from_const(val: i64) -> Self {
@@ -57,16 +51,68 @@ impl Fps {
         }
     }
 
+    /// 1 / (1 - x) を x^nまで計算する。
+    /// O(N logN)
+    /// [x^0]f = 0 のときは存在しない
     pub fn inv(&self, n: usize) -> Self {
-        // 1 / (1 - x) の x^nまで計算
-
+        assert!(self.a[0] != Modint::zero());
         let mut g = Fps::from_mint_vec(vec![self.a[0].inv()]);
         let mut sz = 1;
-        while sz <= n{
+        while sz < n {
             sz *= 2;
             let mut ng = &g * &self.get_n(sz);
             ng = Fps::from_const(2) - ng;
             ng = &g * &ng;
+            g = ng.get_n(sz);
+        }
+
+        g
+    }
+
+    pub fn differential(&self, n: usize) -> Self {
+        let mut a = vec![];
+        for i in 1..n {
+            if i < self.n {
+                a.push(self.a[i] * Modint::new(i as i64));
+            } else {
+                a.push(Modint::zero());
+            }
+        }
+        Fps::from_mint_vec(a)
+    }
+
+    pub fn integral(&self, n: usize) -> Self {
+        let mut a = vec![Modint::zero()];
+        for i in 0..n - 1 {
+            if i < self.n {
+                a.push(self.a[i] / Modint::new((i as i64) + 1));
+            } else {
+                a.push(Modint::zero());
+            }
+        }
+        Fps::from_mint_vec(a)
+    }
+
+    /// log f
+    /// O(N logN)
+    /// log f = integral ((differential f) / f)
+    /// [x^0]f == 1 でないといけない
+    pub fn log(&self, n: usize) -> Self {
+        assert_eq!(self.a[0].x, 1);
+        let df = self.differential(n);
+        (&df / self).integral(n).get_n(n)
+    }
+
+    /// exp f
+    /// [x^0]f == 0 でないといけない
+    /// O(N logN)
+    pub fn exp(&self, n: usize) -> Self {
+        assert_eq!(self.a[0].x, 0);
+        let mut g = Fps::from_const(1);
+        let mut sz = 1;
+        while sz < n {
+            sz *= 2;
+            let mut ng = &g * &(self.get_n(sz) + Fps::from_const(1) - g.log(sz));
             g = ng.get_n(sz);
         }
 
@@ -139,7 +185,7 @@ impl std::ops::Sub<Fps> for Fps {
 
 impl std::ops::Mul<&Fps> for &Fps {
     type Output = Fps;
-    
+
     fn mul(self, other: &Fps) -> Fps {
         let n = self.a.len();
         let m = other.a.len();
@@ -150,9 +196,27 @@ impl std::ops::Mul<&Fps> for &Fps {
 
 impl std::ops::Mul<Fps> for Fps {
     type Output = Fps;
-    
+
     fn mul(self, other: Fps) -> Fps {
         &self * &other
     }
 }
 
+impl std::ops::Div<&Fps> for &Fps {
+    type Output = Fps;
+
+    fn div(self, other: &Fps) -> Fps {
+        let n = self.n;
+        let m = other.n;
+        let inv = other.inv(n.max(m) + 10);
+        self * &inv
+    }
+}
+
+impl std::ops::Div<Fps> for Fps {
+    type Output = Fps;
+
+    fn div(self, other: Fps) -> Fps {
+        &self / &other
+    }
+}

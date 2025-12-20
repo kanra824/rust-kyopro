@@ -1,56 +1,25 @@
 #![allow(unused)]
 
-mod library;
-use library::graph::graph::*;
-use library::graph::dijkstra::*;
 
 fn main() {
-    // // interactive
-    // let stdin = stdin();
-    // let mut source = LineSource::new(BufReader::new(stdin.lock()));
-    input! {
-        // from &mut source,
-        h: usize,
-        w: usize,
-        s: [Chars; h],
+    let mut s = String::new();
+    let stdin = stdin();
+    let mut re = Reader::new(&mut s, stdin);
+    
+    let n: usize = re.r();
+    let a: Vec<i64> = re.rv();
+
+    let a = Fps::from_i64_vec(a);
+    let b = a.log(n);
+    for i in 0..n {
+        print!(" {}", b.a[i])
     }
-
-    let mut g = Graph::new(h * w + 26);
-    let ofs = h * w;
-    for r in 0..h {
-        for c in 0..w {
-            if s[r][c] == '#' {
-                continue;
-            }
-            for (nr, nc) in adj_pos(h, w, r, c) {
-                if s[nr][nc] == '#' {
-                    continue;
-                }
-                g.add_edge(r * w + c, nr * w + nc, 2);
-            }
-
-            if 'a' <= s[r][c] && s[r][c] <= 'z' {
-                let val = s[r][c] as usize - 'a' as usize;
-                g.add_edge(r * w + c, ofs + val, 1);
-                g.add_edge(ofs + val, r * w + c, 1);
-            }
-        }
-    }
-
-    let d = g.dijkstra(0);
-
-    match d[h * w - 1] {
-        None => {
-            pr(-1);
-        },
-        Some(val) => {
-            pr(val / 2);
-        }
-    }
+    println!();
 }
 
-use proconio::marker::{Chars, Isize1, Usize1};
-use proconio::{input, source::line::LineSource};
+mod library;
+use library::fps::fps::Fps;
+
 
 use std::cmp::{max, min};
 use std::collections::*;
@@ -192,3 +161,4 @@ fn adj_pos(h: usize, w: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
 fn char_to_i64(c: char) -> i64 {
     c as u32 as i64 - '0' as u32 as i64
 }
+

@@ -1,28 +1,27 @@
 #![allow(unused)]
 
-
 fn main() {
     let mut s = String::new();
     let stdin = stdin();
     let mut re = Reader::new(&mut s, stdin);
-    
+
     let n: usize = re.r();
     let a: Vec<i64> = re.rv();
 
     let a = Fps::from_i64_vec(a);
-    let b = a.inv(n);
+    let b = a.exp(n);
     for i in 0..n {
         print!(" {}", b.a[i])
     }
+    println!();
 }
 
 mod library;
-use library::fps::fps::*;
-
+use library::fps::fps::Fps;
 
 use std::cmp::{max, min};
 use std::collections::*;
-use std::io::{stdin, stdout, BufReader, Read, Stdin, Write};
+use std::io::{BufReader, Read, Stdin, Write, stdin, stdout};
 use std::str::FromStr;
 use std::{fmt, ops};
 
@@ -160,4 +159,3 @@ fn adj_pos(h: usize, w: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
 fn char_to_i64(c: char) -> i64 {
     c as u32 as i64 - '0' as u32 as i64
 }
-
