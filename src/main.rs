@@ -1,27 +1,91 @@
 #![allow(unused)]
 
-fn main() {
-    let mut s = String::new();
-    let stdin = stdin();
-    let mut re = Reader::new(&mut s, stdin);
+use library::number::mint::*;
+mod tests;
 
-    let n: usize = re.r();
-    let a: Vec<i64> = re.rv();
-
-    let a = Fps::from_i64_vec(a);
-    let b = a.exp(n);
-    for i in 0..n {
-        print!(" {}", b.a[i])
+fn solve() {
+    input! {
+        p: i64,
+        a: i64,
+        b: i64,
+        s: i64,
+        g: i64,
     }
-    println!();
+
+    if s == g {
+        pr(0);
+        return;
+    }
+
+    if a == 0 {
+        if b == g {
+            pr(1);
+        } else {
+            pr(-1);
+        }
+        return;
+    }
+
+    let mut inva = Modint::new_p(a, p).inv();
+    let mut invb = inva * Modint::new_p(-b, p);
+
+    let mut biga = Modint::new_p(1, p);
+    let mut bigb = Modint::new_p(0, p);
+    let mut m = 1;
+    while m * m < p {
+        m += 1;
+    }
+
+    let mut small = BTreeMap::new();
+    let mut crr = Modint::new_p(g, p);
+    for i in 0..m {
+        if !small.contains_key(&crr.x) {
+            small.insert(crr.x, i);
+        }
+        crr = crr * inva + invb;
+        biga *= a;
+        bigb *= a;
+        bigb += b;
+    }
+
+    let mut crr = Modint::new_p(s, p);
+    for i in 0..p/m+1 {
+        if small.contains_key(&crr.x) {
+            pr(i * m + small[&crr.x]);
+            return;
+        }
+        crr = crr * biga + bigb;
+    }
+    pr(-1);
+
+
+}
+
+fn main() {
+    // // interactive
+    // let stdin = stdin();
+    // let mut source = LineSource::new(BufReader::new(stdin.lock()));
+    input! {
+        // from &mut source,
+        t: usize,
+    }
+
+
+    for _ in 0..t {
+        solve();
+    }
+
 }
 
 mod library;
-use library::fps::fps::Fps;
+use library::fps::fps::*;
+
+use proconio::marker::{Chars, Isize1, Usize1};
+use proconio::{input, source::line::LineSource};
 
 use std::cmp::{max, min};
 use std::collections::*;
-use std::io::{BufReader, Read, Stdin, Write, stdin, stdout};
+use std::io::{stdin, stdout, BufReader, Read, Stdin, Write};
 use std::str::FromStr;
 use std::{fmt, ops};
 
@@ -159,3 +223,4 @@ fn adj_pos(h: usize, w: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
 fn char_to_i64(c: char) -> i64 {
     c as u32 as i64 - '0' as u32 as i64
 }
+

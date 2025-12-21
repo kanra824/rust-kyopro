@@ -1,4 +1,4 @@
-use crate::library::number::mint::{Modint, MOD};
+use crate::library::number::mint::{Modint};
 use std::sync::OnceLock;
 
 static POWV: OnceLock<Vec<Modint>> = OnceLock::new();
@@ -124,8 +124,8 @@ pub fn convolution(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
         n *= 2;
     }
 
-    a.resize(n, Modint::zero());
-    b.resize(n, Modint::zero());
+    a.resize(n, Modint::new(0));
+    b.resize(n, Modint::new(0));
 
     let powv = get_powv();
     let invpowv = get_invpowv();

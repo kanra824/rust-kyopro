@@ -1,5 +1,10 @@
 #![allow(unused)]
 use std::collections::*;
+use proconio::input;
+use proconio::marker::Chars;
+use proconio::marker::Isize1;
+use proconio::marker::Usize1;
+use proconio::source::line::LineSource;
 use std::cmp::max;
 use std::cmp::min;
 use std::fmt;
@@ -13,27 +18,12 @@ use std::ops;
 use std::str::FromStr;
 use std::sync::OnceLock;
 
-fn main() {
-    let mut s = String::new();
-    let stdin = stdin();
-    let mut re = Reader::new(&mut s, stdin);
-
-    let n: usize = re.r();
-    let a: Vec<i64> = re.rv();
-
-    let a = Fps::from_i64_vec(a);
-    let b = a.exp(n);
-    for i in 0..n {
-        print!(" {}", b.a[i])
-    }
-    println!();
-}
-
-pub const MOD: i64 = 998244353;
+pub const MOD998244353: i64 = 998244353;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Modint {
     pub x: i64,
+    pub p: i64,
 }
 
 impl std::fmt::Display for Modint {
@@ -44,11 +34,24 @@ impl std::fmt::Display for Modint {
 
 impl Modint {
     pub fn new(x: i64) -> Self {
-        Modint { x : (x % MOD) as i64 }
+        let p = MOD998244353;
+        if x >= 0 {
+            Modint { x: x % p, p }
+        } else {
+            let tmp = x.abs() % p;
+            let val = x + tmp * p;
+            Modint { x: (val + p) % p, p }
+        }
     }
 
-    pub fn zero() -> Self {
-        Modint::new(0)
+    pub fn new_p(x: i64, p: i64) -> Self {
+        if x >= 0 {
+            Modint { x: x % p, p }
+        } else {
+            let tmp = x.abs() % p;
+            let val = x + tmp * p;
+            Modint { x: (val + p) % p, p }
+        }
     }
 
     pub fn pow(&self, mut k: i64) -> Self {
@@ -68,7 +71,7 @@ impl Modint {
         if self.x == 0 {
             panic!("0 has no inv");
         }
-        self.pow((MOD - 2) as i64)
+        self.pow((self.p - 2) as i64)
     }
 }
 
@@ -76,9 +79,9 @@ impl std::ops::Neg for Modint {
     type Output = Modint;
 
     fn neg(mut self) -> Modint {
-        self.x = (MOD - self.x);
-        if self.x >= MOD {
-            self.x -= MOD;
+        self.x = (self.p - self.x);
+        if self.x >= self.p {
+            self.x -= self.p;
         }
         self
     }
@@ -96,7 +99,7 @@ impl std::ops::Add<i64> for Modint {
     type Output = Modint;
 
     fn add(mut self, rhs: i64) -> Modint {
-        self.x = (self.x + rhs % MOD) % MOD;
+        self.x = (self.x + rhs % self.p) % self.p;
         self
     }
 }
@@ -113,7 +116,7 @@ impl std::ops::Sub<i64> for Modint {
     type Output = Modint;
 
     fn sub(mut self, rhs: i64) -> Modint {
-        self.x = (self.x + MOD - rhs % MOD) % MOD;
+        self.x = (self.x + self.p - rhs % self.p) % self.p;
         self
     }
 }
@@ -128,8 +131,8 @@ impl std::ops::Mul<Self> for Modint {
 impl std::ops::Mul<i64> for Modint {
     type Output = Modint;
     fn mul(mut self, mut rhs: i64) -> Modint {
-        rhs %= MOD;
-        self.x = self.x * rhs % MOD;
+        rhs %= self.p;
+        self.x = self.x * rhs % self.p;
         self
     }
 }
@@ -209,6 +212,81 @@ impl std::ops::DivAssign<i64> for Modint {
 }
 
 
+fn solve() {
+    input! {
+        p: i64,
+        a: i64,
+        b: i64,
+        s: i64,
+        g: i64,
+    }
+
+    if s == g {
+        pr(0);
+        return;
+    }
+
+    if a == 0 {
+        if b == g {
+            pr(1);
+        } else {
+            pr(-1);
+        }
+        return;
+    }
+
+    let mut inva = Modint::new_p(a, p).inv();
+    let mut invb = inva * Modint::new_p(-b, p);
+
+    let mut biga = Modint::new_p(1, p);
+    let mut bigb = Modint::new_p(0, p);
+    let mut m = 1;
+    while m * m < p {
+        m += 1;
+    }
+
+    let mut small = BTreeMap::new();
+    let mut crr = Modint::new_p(g, p);
+    for i in 0..m {
+        if !small.contains_key(&crr.x) {
+            small.insert(crr.x, i);
+        }
+        crr = crr * inva + invb;
+        biga *= a;
+        bigb *= a;
+        bigb += b;
+    }
+
+    let mut crr = Modint::new_p(s, p);
+    for i in 0..p/m+1 {
+        if small.contains_key(&crr.x) {
+            pr(i * m + small[&crr.x]);
+            return;
+        }
+        crr = crr * biga + bigb;
+    }
+    pr(-1);
+
+
+}
+
+fn main() {
+    // // interactive
+    // let stdin = stdin();
+    // let mut source = LineSource::new(BufReader::new(stdin.lock()));
+    input! {
+        // from &mut source,
+        t: usize,
+    }
+
+
+    for _ in 0..t {
+        solve();
+    }
+
+}
+
+
 pub struct Combination {
     n: usize,
     fact: Vec<Modint>,
@@ -250,7 +328,7 @@ impl Combination {
     #[allow(non_snake_case)]
     pub fn P(&mut self, n: usize, k: usize) -> Modint {
         if n < k {
-            Modint::zero()
+            Modint::new(0)
         } else {
             self.fact(n) * self.rfact(n - k)
         }
@@ -259,7 +337,7 @@ impl Combination {
     #[allow(non_snake_case)]
     pub fn C(&mut self, n: usize, k: usize) -> Modint {
         if n < k {
-            Modint::zero()
+            Modint::new(0)
         } else {
             self.fact(n) * self.rfact(k) * self.rfact(n - k)
         }
@@ -400,8 +478,8 @@ pub fn convolution(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
         n *= 2;
     }
 
-    a.resize(n, Modint::zero());
-    b.resize(n, Modint::zero());
+    a.resize(n, Modint::new(0));
+    b.resize(n, Modint::new(0));
 
     let powv = get_powv();
     let invpowv = get_invpowv();
@@ -438,7 +516,7 @@ impl Fps {
     pub fn new() -> Self {
         Fps {
             n: 1,
-            a: vec![Modint::zero()],
+            a: vec![Modint::new(0)],
         }
     }
 
@@ -462,7 +540,7 @@ impl Fps {
     }
 
     pub fn get_n(&self, n: usize) -> Self {
-        let mut a = vec![Modint::zero(); n + 1];
+        let mut a = vec![Modint::new(0); n + 1];
         for i in 0..self.n {
             if i > n {
                 break;
@@ -476,10 +554,12 @@ impl Fps {
     }
 
     /// 1 / (1 - x) を x^nまで計算する。
+    /// 
     /// O(N logN)
-    /// [x^0]f = 0 のときは存在しない
+    /// 
+    /// f_0 = 0 のときは存在しない
     pub fn inv(&self, n: usize) -> Self {
-        assert!(self.a[0] != Modint::zero());
+        assert!(self.a[0] != Modint::new(0));
         let mut g = Fps::from_mint_vec(vec![self.a[0].inv()]);
         let mut sz = 1;
         while sz < n {
@@ -493,34 +573,43 @@ impl Fps {
         g
     }
 
+    /// 微分
+    /// 
+    /// O(N)
     pub fn differential(&self, n: usize) -> Self {
         let mut a = vec![];
         for i in 1..n {
             if i < self.n {
                 a.push(self.a[i] * Modint::new(i as i64));
             } else {
-                a.push(Modint::zero());
+                a.push(Modint::new(0));
             }
         }
         Fps::from_mint_vec(a)
     }
 
+    /// 積分
+    /// 
+    /// O(N)
     pub fn integral(&self, n: usize) -> Self {
-        let mut a = vec![Modint::zero()];
+        let mut a = vec![Modint::new(0)];
         for i in 0..n - 1 {
             if i < self.n {
                 a.push(self.a[i] / Modint::new((i as i64) + 1));
             } else {
-                a.push(Modint::zero());
+                a.push(Modint::new(0));
             }
         }
         Fps::from_mint_vec(a)
     }
 
     /// log f
+    /// 
     /// O(N logN)
+    /// 
     /// log f = integral ((differential f) / f)
-    /// [x^0]f == 1 でないといけない
+    /// 
+    /// f_0 == 1 でないといけない
     pub fn log(&self, n: usize) -> Self {
         assert_eq!(self.a[0].x, 1);
         let df = self.differential(n);
@@ -528,8 +617,10 @@ impl Fps {
     }
 
     /// exp f
-    /// [x^0]f == 0 でないといけない
+    /// 
     /// O(N logN)
+    /// 
+    /// f_0 == 0 でないといけない
     pub fn exp(&self, n: usize) -> Self {
         assert_eq!(self.a[0].x, 0);
         let mut g = Fps::from_const(1);
@@ -644,6 +735,7 @@ impl std::ops::Div<Fps> for Fps {
         &self / &other
     }
 }
+
 
 
 
@@ -781,4 +873,5 @@ fn adj_pos(h: usize, w: usize, r: usize, c: usize) -> Vec<(usize, usize)> {
 fn char_to_i64(c: char) -> i64 {
     c as u32 as i64 - '0' as u32 as i64
 }
+
 

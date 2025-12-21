@@ -41,7 +41,7 @@ impl Combination {
     #[allow(non_snake_case)]
     pub fn P(&mut self, n: usize, k: usize) -> Modint {
         if n < k {
-            Modint::zero()
+            Modint::new(0)
         } else {
             self.fact(n) * self.rfact(n - k)
         }
@@ -50,7 +50,7 @@ impl Combination {
     #[allow(non_snake_case)]
     pub fn C(&mut self, n: usize, k: usize) -> Modint {
         if n < k {
-            Modint::zero()
+            Modint::new(0)
         } else {
             self.fact(n) * self.rfact(k) * self.rfact(n - k)
         }

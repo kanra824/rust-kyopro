@@ -14,7 +14,7 @@ impl Fps {
     pub fn new() -> Self {
         Fps {
             n: 1,
-            a: vec![Modint::zero()],
+            a: vec![Modint::new(0)],
         }
     }
 
@@ -38,7 +38,7 @@ impl Fps {
     }
 
     pub fn get_n(&self, n: usize) -> Self {
-        let mut a = vec![Modint::zero(); n + 1];
+        let mut a = vec![Modint::new(0); n + 1];
         for i in 0..self.n {
             if i > n {
                 break;
@@ -52,10 +52,12 @@ impl Fps {
     }
 
     /// 1 / (1 - x) を x^nまで計算する。
+    /// 
     /// O(N logN)
-    /// [x^0]f = 0 のときは存在しない
+    /// 
+    /// f_0 = 0 のときは存在しない
     pub fn inv(&self, n: usize) -> Self {
-        assert!(self.a[0] != Modint::zero());
+        assert!(self.a[0] != Modint::new(0));
         let mut g = Fps::from_mint_vec(vec![self.a[0].inv()]);
         let mut sz = 1;
         while sz < n {
@@ -69,34 +71,43 @@ impl Fps {
         g
     }
 
+    /// 微分
+    /// 
+    /// O(N)
     pub fn differential(&self, n: usize) -> Self {
         let mut a = vec![];
         for i in 1..n {
             if i < self.n {
                 a.push(self.a[i] * Modint::new(i as i64));
             } else {
-                a.push(Modint::zero());
+                a.push(Modint::new(0));
             }
         }
         Fps::from_mint_vec(a)
     }
 
+    /// 積分
+    /// 
+    /// O(N)
     pub fn integral(&self, n: usize) -> Self {
-        let mut a = vec![Modint::zero()];
+        let mut a = vec![Modint::new(0)];
         for i in 0..n - 1 {
             if i < self.n {
                 a.push(self.a[i] / Modint::new((i as i64) + 1));
             } else {
-                a.push(Modint::zero());
+                a.push(Modint::new(0));
             }
         }
         Fps::from_mint_vec(a)
     }
 
     /// log f
+    /// 
     /// O(N logN)
+    /// 
     /// log f = integral ((differential f) / f)
-    /// [x^0]f == 1 でないといけない
+    /// 
+    /// f_0 == 1 でないといけない
     pub fn log(&self, n: usize) -> Self {
         assert_eq!(self.a[0].x, 1);
         let df = self.differential(n);
@@ -104,8 +115,10 @@ impl Fps {
     }
 
     /// exp f
-    /// [x^0]f == 0 でないといけない
+    /// 
     /// O(N logN)
+    /// 
+    /// f_0 == 0 でないといけない
     pub fn exp(&self, n: usize) -> Self {
         assert_eq!(self.a[0].x, 0);
         let mut g = Fps::from_const(1);

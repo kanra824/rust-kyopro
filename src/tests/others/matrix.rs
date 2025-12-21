@@ -1,8 +1,10 @@
 use crate::library::others::matrix::*;
 use crate::library::number::mint::*;
 
+const MOD: i64 = 998244353;
+
 fn to_mint(a: Vec<Vec<i64>>) -> Vec<Vec<Modint>> {
-    let mut res = vec![vec![Modint::zero();a[0].len()]; a.len()];
+    let mut res = vec![vec![Modint::new(0);a[0].len()]; a.len()];
     for i in 0..a.len() {
         for j in 0..a[0].len() {
             res[i][j] = Modint::new(a[i][j]);
