@@ -35,8 +35,8 @@ impl Modint {
     }
 
     pub fn pow(&self, mut k: i64) -> Self {
-        let mut mul = Modint::new(self.x);
-        let mut res = Modint::new(1);
+        let mut mul = Modint::new_p(self.x, self.p);
+        let mut res = Modint::new_p(1, self.p);
         while k > 0 {
             if k & 1 == 1 {
                 res = res * mul;
@@ -130,7 +130,7 @@ impl std::ops::Div<i64> for Modint {
         if rhs == 0 {
             panic!("0 division is occured");
         }
-        self * Modint::new(rhs).inv()
+        self * Modint::new_p(rhs, self.p).inv()
     }
 }
 
