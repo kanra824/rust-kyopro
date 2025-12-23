@@ -37,6 +37,7 @@ impl Fps {
         }
     }
 
+    /// x^n までとる
     pub fn get_n(&self, n: usize) -> Self {
         let mut a = vec![Modint::new(0); n + 1];
         for i in 0..self.n {
@@ -49,6 +50,16 @@ impl Fps {
             n: a.len(),
             a: a.to_vec(),
         }
+    }
+
+    pub fn substitute(&self, x: Modint) -> Modint {
+        let mut mul = x;
+        let mut res = self.a[0];
+        for i in 1..self.n {
+            res += self.a[i] * mul;
+            mul *= x;
+        }
+        res
     }
 
     /// 1 / (1 - x) を x^nまで計算する。
@@ -139,6 +150,23 @@ impl Fps {
         [x^n] 1 / (1 - x^k) = (n + r - 1) C (r - 1)
         */
         comb.C(n + k - 1, k - 1)
+    }
+}
+
+impl std::ops::Neg for &Fps {
+    type Output = Fps;
+
+    fn neg(self) -> Fps {
+        let zero = Fps::from_const(0);
+        &zero - self
+    }
+}
+
+impl std::ops::Neg for Fps {
+    type Output = Fps;
+
+    fn neg(self) -> Fps {
+        -(&self)
     }
 }
 

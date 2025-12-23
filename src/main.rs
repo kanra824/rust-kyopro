@@ -1,83 +1,16 @@
 #![allow(unused)]
 
-fn solve() {
-    input! {
-        p: i64,
-        a: i64,
-        b: i64,
-        s: i64,
-        g: i64,
-    }
-
-    if s == g {
-        pr(0);
-        return;
-    }
-
-    if a == 0 {
-        if b == g {
-            pr(1);
-        } else {
-            pr(-1);
-        }
-        return;
-    }
-
-    Modint::set_p(p);
-
-    let mut inva = Modint::new(a).inv();
-    let mut invb = inva * Modint::new(-b);
-
-    let mut biga = Modint::new(1);
-    let mut bigb = Modint::new(0);
-    let mut m = 1;
-    while m * m < p {
-        m += 1;
-    }
-
-    let mut small = BTreeMap::new();
-    let mut crr = Modint::new(g);
-    for i in 0..m {
-        if !small.contains_key(&crr.x) {
-            small.insert(crr.x, i);
-        }
-        crr = crr * inva + invb;
-        biga *= a;
-        bigb *= a;
-        bigb += b;
-    }
-
-    let mut crr = Modint::new(s);
-    for i in 0..p/m+1 {
-        if small.contains_key(&crr.x) {
-            pr(i * m + small[&crr.x]);
-            return;
-        }
-        crr = crr * biga + bigb;
-    }
-    pr(-1);
-
-
-}
-
 fn main() {
     // // interactive
     // let stdin = stdin();
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
         // from &mut source,
-        t: usize,
     }
-
-
-    for _ in 0..t {
-        solve();
-    }
-
 }
 
 mod library;
-use library::number::mint::Modint;
+mod tests;
 
 use proconio::marker::{Chars, Isize1, Usize1};
 use proconio::{input, source::line::LineSource};
