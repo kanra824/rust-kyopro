@@ -1,8 +1,5 @@
 #![allow(unused)]
 
-use library::number::mint::*;
-mod tests;
-
 fn solve() {
     input! {
         p: i64,
@@ -26,18 +23,20 @@ fn solve() {
         return;
     }
 
-    let mut inva = Modint::new_p(a, p).inv();
-    let mut invb = inva * Modint::new_p(-b, p);
+    Modint::set_p(p);
 
-    let mut biga = Modint::new_p(1, p);
-    let mut bigb = Modint::new_p(0, p);
+    let mut inva = Modint::new(a).inv();
+    let mut invb = inva * Modint::new(-b);
+
+    let mut biga = Modint::new(1);
+    let mut bigb = Modint::new(0);
     let mut m = 1;
     while m * m < p {
         m += 1;
     }
 
     let mut small = BTreeMap::new();
-    let mut crr = Modint::new_p(g, p);
+    let mut crr = Modint::new(g);
     for i in 0..m {
         if !small.contains_key(&crr.x) {
             small.insert(crr.x, i);
@@ -48,7 +47,7 @@ fn solve() {
         bigb += b;
     }
 
-    let mut crr = Modint::new_p(s, p);
+    let mut crr = Modint::new(s);
     for i in 0..p/m+1 {
         if small.contains_key(&crr.x) {
             pr(i * m + small[&crr.x]);
@@ -78,7 +77,7 @@ fn main() {
 }
 
 mod library;
-use library::fps::fps::*;
+use library::number::mint::Modint;
 
 use proconio::marker::{Chars, Isize1, Usize1};
 use proconio::{input, source::line::LineSource};

@@ -1,5 +1,7 @@
 pub const MOD998244353: i64 = 998244353;
 
+static mut MINT_MOD: i64 = 998244353;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Modint {
     pub x: i64,
@@ -13,18 +15,18 @@ impl std::fmt::Display for Modint {
 }
 
 impl Modint {
-    pub fn new(x: i64) -> Self {
-        let p = MOD998244353;
-        if x >= 0 {
-            Modint { x: x % p, p }
-        } else {
-            let tmp = x.abs() % p;
-            let val = x + tmp * p;
-            Modint { x: (val + p) % p, p }
+    fn get_p() -> i64 {
+        unsafe { MINT_MOD }
+    }
+
+    pub fn set_p(p: i64) {
+        unsafe {
+            MINT_MOD = p;
         }
     }
 
-    pub fn new_p(x: i64, p: i64) -> Self {
+    pub fn new(x: i64) -> Self {
+        let p = Modint::get_p();
         if x >= 0 {
             Modint { x: x % p, p }
         } else {
@@ -35,8 +37,8 @@ impl Modint {
     }
 
     pub fn pow(&self, mut k: i64) -> Self {
-        let mut mul = Modint::new_p(self.x, self.p);
-        let mut res = Modint::new_p(1, self.p);
+        let mut mul = Modint::new(self.x);
+        let mut res = Modint::new(1);
         while k > 0 {
             if k & 1 == 1 {
                 res = res * mul;
@@ -130,7 +132,7 @@ impl std::ops::Div<i64> for Modint {
         if rhs == 0 {
             panic!("0 division is occured");
         }
-        self * Modint::new_p(rhs, self.p).inv()
+        self * Modint::new(rhs).inv()
     }
 }
 

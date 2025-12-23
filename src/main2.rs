@@ -16,9 +16,86 @@ use std::io::stdin;
 use std::io::stdout;
 use std::ops;
 use std::str::FromStr;
-use std::sync::OnceLock;
+
+fn solve() {
+    input! {
+        p: i64,
+        a: i64,
+        b: i64,
+        s: i64,
+        g: i64,
+    }
+
+    if s == g {
+        pr(0);
+        return;
+    }
+
+    if a == 0 {
+        if b == g {
+            pr(1);
+        } else {
+            pr(-1);
+        }
+        return;
+    }
+
+    Modint::set_p(p);
+
+    let mut inva = Modint::new(a).inv();
+    let mut invb = inva * Modint::new(-b);
+
+    let mut biga = Modint::new(1);
+    let mut bigb = Modint::new(0);
+    let mut m = 1;
+    while m * m < p {
+        m += 1;
+    }
+
+    let mut small = BTreeMap::new();
+    let mut crr = Modint::new(g);
+    for i in 0..m {
+        if !small.contains_key(&crr.x) {
+            small.insert(crr.x, i);
+        }
+        crr = crr * inva + invb;
+        biga *= a;
+        bigb *= a;
+        bigb += b;
+    }
+
+    let mut crr = Modint::new(s);
+    for i in 0..p/m+1 {
+        if small.contains_key(&crr.x) {
+            pr(i * m + small[&crr.x]);
+            return;
+        }
+        crr = crr * biga + bigb;
+    }
+    pr(-1);
+
+
+}
+
+fn main() {
+    // // interactive
+    // let stdin = stdin();
+    // let mut source = LineSource::new(BufReader::new(stdin.lock()));
+    input! {
+        // from &mut source,
+        t: usize,
+    }
+
+
+    for _ in 0..t {
+        solve();
+    }
+
+}
 
 pub const MOD998244353: i64 = 998244353;
+
+static mut MINT_MOD: i64 = 998244353;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Modint {
@@ -33,18 +110,18 @@ impl std::fmt::Display for Modint {
 }
 
 impl Modint {
-    pub fn new(x: i64) -> Self {
-        let p = MOD998244353;
-        if x >= 0 {
-            Modint { x: x % p, p }
-        } else {
-            let tmp = x.abs() % p;
-            let val = x + tmp * p;
-            Modint { x: (val + p) % p, p }
+    fn get_p() -> i64 {
+        unsafe { MINT_MOD }
+    }
+
+    pub fn set_p(p: i64) {
+        unsafe {
+            MINT_MOD = p;
         }
     }
 
-    pub fn new_p(x: i64, p: i64) -> Self {
+    pub fn new(x: i64) -> Self {
+        let p = Modint::get_p();
         if x >= 0 {
             Modint { x: x % p, p }
         } else {
@@ -55,8 +132,8 @@ impl Modint {
     }
 
     pub fn pow(&self, mut k: i64) -> Self {
-        let mut mul = Modint::new_p(self.x, self.p);
-        let mut res = Modint::new_p(1, self.p);
+        let mut mul = Modint::new(self.x);
+        let mut res = Modint::new(1);
         while k > 0 {
             if k & 1 == 1 {
                 res = res * mul;
@@ -150,7 +227,7 @@ impl std::ops::Div<i64> for Modint {
         if rhs == 0 {
             panic!("0 division is occured");
         }
-        self * Modint::new_p(rhs, self.p).inv()
+        self * Modint::new(rhs).inv()
     }
 }
 
@@ -208,531 +285,6 @@ impl std::ops::DivAssign<Self> for Modint {
 impl std::ops::DivAssign<i64> for Modint {
     fn div_assign(&mut self, rhs: i64) {
         *self = *self / rhs;
-    }
-}
-
-
-fn solve() {
-    input! {
-        p: i64,
-        a: i64,
-        b: i64,
-        s: i64,
-        g: i64,
-    }
-
-    if s == g {
-        pr(0);
-        return;
-    }
-
-    if a == 0 {
-        if b == g {
-            pr(1);
-        } else {
-            pr(-1);
-        }
-        return;
-    }
-
-    let mut inva = Modint::new_p(a, p).inv();
-    let mut invb = inva * Modint::new_p(-b, p);
-
-    let mut biga = Modint::new_p(1, p);
-    let mut bigb = Modint::new_p(0, p);
-    let mut m = 1;
-    while m * m < p {
-        m += 1;
-    }
-
-    let mut small = BTreeMap::new();
-    let mut crr = Modint::new_p(g, p);
-    for i in 0..m {
-        if !small.contains_key(&crr.x) {
-            small.insert(crr.x, i);
-        }
-        crr = crr * inva + invb;
-        biga *= a;
-        bigb *= a;
-        bigb += b;
-    }
-
-    let mut crr = Modint::new_p(s, p);
-    for i in 0..p/m+1 {
-        if small.contains_key(&crr.x) {
-            pr(i * m + small[&crr.x]);
-            return;
-        }
-        crr = crr * biga + bigb;
-    }
-    pr(-1);
-
-
-}
-
-fn main() {
-    // // interactive
-    // let stdin = stdin();
-    // let mut source = LineSource::new(BufReader::new(stdin.lock()));
-    input! {
-        // from &mut source,
-        t: usize,
-    }
-
-
-    for _ in 0..t {
-        solve();
-    }
-
-}
-
-
-pub struct Combination {
-    n: usize,
-    fact: Vec<Modint>,
-    rfact: Vec<Modint>,
-}
-
-impl Combination {
-    pub fn new() -> Self {
-        Combination {
-            n: 1,
-            fact: vec![Modint::new(1)],
-            rfact: vec![Modint::new(1)],
-        }
-    }
-
-    pub fn extend(&mut self, n: usize) {
-        if self.n >= n {
-            return
-        }
-        for i in self.n..n {
-            self.fact.push(self.fact[i - 1] * Modint::new(i as i64));
-        }
-        for i in self.n..n {
-            self.rfact.push(self.fact[i].inv());
-        }
-        self.n = n;
-    }
-
-    pub fn fact(&mut self, k: usize) -> Modint {
-        self.extend(k + 1);
-        self.fact[k]
-    }
-
-    pub fn rfact(&mut self, k: usize) -> Modint {
-        self.extend(k + 1);
-        self.rfact[k]
-    }
-
-    #[allow(non_snake_case)]
-    pub fn P(&mut self, n: usize, k: usize) -> Modint {
-        if n < k {
-            Modint::new(0)
-        } else {
-            self.fact(n) * self.rfact(n - k)
-        }
-    }
-
-    #[allow(non_snake_case)]
-    pub fn C(&mut self, n: usize, k: usize) -> Modint {
-        if n < k {
-            Modint::new(0)
-        } else {
-            self.fact(n) * self.rfact(k) * self.rfact(n - k)
-        }
-    }
-
-    #[allow(non_snake_case)]
-    pub fn H(&mut self, n: usize, k: usize) -> Modint {
-        if n == 0 && k == 0 {
-            Modint::new(1)
-        } else {
-            self.C(n + k - 1, k)
-        }
-    }
-}
-
-
-
-static POWV: OnceLock<Vec<Modint>> = OnceLock::new();
-static INVPOWV: OnceLock<Vec<Modint>> = OnceLock::new();
-
-fn calc_powv() -> Vec<Modint> {
-    let mut res = vec![];
-    let mut r = Modint::new(3).pow(119);
-    for i in 0..23 {
-        res.push(r);
-        r = r * r;
-    }
-    res.reverse();
-    res
-}
-
-fn calc_invpowv() -> Vec<Modint> {
-    let mut res = vec![];
-    let mut r = Modint::new(3).pow(119).inv();
-    for i in 0..23 {
-        res.push(r);
-        r = r * r;
-    }
-    res.reverse();
-    res
-}
-
-fn get_powv() -> &'static Vec<Modint> {
-    POWV.get_or_init(calc_powv)
-}
-
-fn get_invpowv() -> &'static Vec<Modint> {
-    INVPOWV.get_or_init(calc_invpowv)
-}
-
-fn ntt(a: &Vec<Modint>, depth: i64, root: &Vec<Modint>) -> Vec<Modint> {
-    let n = a.len();
-    if n == 1 {
-        return a.clone();
-    }
-
-    let mut even = vec![];
-    let mut odd = vec![];
-    for i in 0..n {
-        if i % 2 == 0 {
-            even.push(a[i]);
-        } else {
-            odd.push(a[i]);
-        }
-    }
-
-    let d_even = ntt(&even, depth - 1, root);
-    let d_odd = ntt(&odd, depth - 1, root);
-
-    let r = root[depth as usize];
-
-    let mut now = Modint::new(1);
-    let mut res = vec![];
-    for i in 0..n {
-        res.push(d_even[i % (n / 2)] + now * d_odd[i % (n / 2)]);
-        now = now * r;
-    }
-
-    res
-}
-
-// Butterfly NTT（反復的な実装、最適化版）
-fn butterfly_ntt(a: &mut Vec<Modint>, root: &Vec<Modint>) {
-    let n = a.len();
-    if n == 1 {
-        return;
-    }
-
-    let log2n = n.trailing_zeros() as usize;
-
-    // ビット反転によるデータの並び替え（最適化版）
-    let mut j = 0;
-    for i in 1..n {
-        let mut bit = n >> 1;
-        while j & bit != 0 {
-            j ^= bit;
-            bit >>= 1;
-        }
-        j ^= bit;
-        if i < j {
-            a.swap(i, j);
-        }
-    }
-
-    // 回転因子を事前計算
-    let mut twiddles = vec![vec![Modint::new(1); 1]; log2n];
-    for h in 0..log2n {
-        let len = 1 << (h + 1);
-        let r = root[h];
-        twiddles[h].resize(len / 2, Modint::new(1));
-        for k in 1..(len / 2) {
-            twiddles[h][k] = twiddles[h][k - 1] * r;
-        }
-    }
-
-    // Butterfly演算
-    for h in 0..log2n {
-        let len = 1 << (h + 1);
-        let half = len / 2;
-        let tw = &twiddles[h];
-
-        for i in (0..n).step_by(len) {
-            for j in 0..half {
-                let u = a[i + j];
-                let v = a[i + j + half] * tw[j];
-                a[i + j] = u + v;
-                a[i + j + half] = u - v;
-            }
-        }
-    }
-}
-
-pub fn convolution(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
-    let sza = a.len();
-    let szb = b.len();
-    let mut n = 1;
-    while n <= sza + szb - 1 {
-        n *= 2;
-    }
-
-    a.resize(n, Modint::new(0));
-    b.resize(n, Modint::new(0));
-
-    let powv = get_powv();
-    let invpowv = get_invpowv();
-
-    butterfly_ntt(&mut a, powv);
-    butterfly_ntt(&mut b, powv);
-
-    // 要素ごとの乗算を最適化
-    for i in 0..n {
-        a[i] = a[i] * b[i];
-    }
-
-    butterfly_ntt(&mut a, invpowv);
-
-    let ninv = Modint::new(n as i64).inv();
-    a.truncate(sza + szb - 1);
-    for i in 0..(sza + szb - 1) {
-        a[i] = a[i] * ninv;
-    }
-    a
-}
-
-
-#[derive(Clone, Debug)]
-pub struct Fps {
-    pub n: usize,
-    pub a: Vec<Modint>,
-}
-
-// \Sum[i=0 to inf] (x^k)^i = 1 / (1 - x^k)
-// [x^n] 1 / (1 - x^k) = (n + r - 1) C (r - 1)
-
-impl Fps {
-    pub fn new() -> Self {
-        Fps {
-            n: 1,
-            a: vec![Modint::new(0)],
-        }
-    }
-
-    pub fn from_mint_vec(a: Vec<Modint>) -> Self {
-        Fps { n: a.len(), a }
-    }
-
-    pub fn from_i64_vec(a_in: Vec<i64>) -> Self {
-        let mut a = vec![];
-        for i in 0..a_in.len() {
-            a.push(Modint::new(a_in[i]));
-        }
-        Fps { n: a.len(), a }
-    }
-
-    pub fn from_const(val: i64) -> Self {
-        Fps {
-            n: 1,
-            a: vec![Modint::new(val)],
-        }
-    }
-
-    pub fn get_n(&self, n: usize) -> Self {
-        let mut a = vec![Modint::new(0); n + 1];
-        for i in 0..self.n {
-            if i > n {
-                break;
-            }
-            a[i] = self.a[i];
-        }
-        Fps {
-            n: a.len(),
-            a: a.to_vec(),
-        }
-    }
-
-    /// 1 / (1 - x) を x^nまで計算する。
-    /// 
-    /// O(N logN)
-    /// 
-    /// f_0 = 0 のときは存在しない
-    pub fn inv(&self, n: usize) -> Self {
-        assert!(self.a[0] != Modint::new(0));
-        let mut g = Fps::from_mint_vec(vec![self.a[0].inv()]);
-        let mut sz = 1;
-        while sz < n {
-            sz *= 2;
-            let mut ng = &g * &self.get_n(sz);
-            ng = Fps::from_const(2) - ng;
-            ng = &g * &ng;
-            g = ng.get_n(sz);
-        }
-
-        g
-    }
-
-    /// 微分
-    /// 
-    /// O(N)
-    pub fn differential(&self, n: usize) -> Self {
-        let mut a = vec![];
-        for i in 1..n {
-            if i < self.n {
-                a.push(self.a[i] * Modint::new(i as i64));
-            } else {
-                a.push(Modint::new(0));
-            }
-        }
-        Fps::from_mint_vec(a)
-    }
-
-    /// 積分
-    /// 
-    /// O(N)
-    pub fn integral(&self, n: usize) -> Self {
-        let mut a = vec![Modint::new(0)];
-        for i in 0..n - 1 {
-            if i < self.n {
-                a.push(self.a[i] / Modint::new((i as i64) + 1));
-            } else {
-                a.push(Modint::new(0));
-            }
-        }
-        Fps::from_mint_vec(a)
-    }
-
-    /// log f
-    /// 
-    /// O(N logN)
-    /// 
-    /// log f = integral ((differential f) / f)
-    /// 
-    /// f_0 == 1 でないといけない
-    pub fn log(&self, n: usize) -> Self {
-        assert_eq!(self.a[0].x, 1);
-        let df = self.differential(n);
-        (&df / self).integral(n).get_n(n)
-    }
-
-    /// exp f
-    /// 
-    /// O(N logN)
-    /// 
-    /// f_0 == 0 でないといけない
-    pub fn exp(&self, n: usize) -> Self {
-        assert_eq!(self.a[0].x, 0);
-        let mut g = Fps::from_const(1);
-        let mut sz = 1;
-        while sz < n {
-            sz *= 2;
-            let mut ng = &g * &(self.get_n(sz) + Fps::from_const(1) - g.log(sz));
-            g = ng.get_n(sz);
-        }
-
-        g
-    }
-
-    pub fn inv_one_minus_xk(k: usize, n: usize, comb: &mut Combination) -> Modint {
-        /*
-        (1 + x^k + x^{2k} + x^{3k} + ... ) = 1 / (1 - x^k)
-
-        [x^n] 1 / (1 - x^k) = (n + r - 1) C (r - 1)
-        */
-        comb.C(n + k - 1, k - 1)
-    }
-}
-
-impl std::ops::Add<&Fps> for &Fps {
-    type Output = Fps;
-
-    fn add(self, other: &Fps) -> Fps {
-        let mut c = vec![];
-        let n = self.a.len();
-        let m = other.a.len();
-        for i in 0..n.min(m) {
-            c.push(self.a[i] + other.a[i]);
-        }
-
-        if n > m {
-            for i in m..n {
-                c.push(self.a[i]);
-            }
-        } else {
-            for i in n..m {
-                c.push(other.a[i]);
-            }
-        }
-        Fps::from_mint_vec(c)
-    }
-}
-
-impl std::ops::Add<Fps> for Fps {
-    type Output = Fps;
-    fn add(self, other: Fps) -> Fps {
-        &self + &other
-    }
-}
-
-impl std::ops::Sub<&Fps> for &Fps {
-    type Output = Fps;
-
-    fn sub(self, other: &Fps) -> Fps {
-        let mut c = vec![];
-        let n = self.a.len();
-        let m = other.a.len();
-        for i in 0..n.max(m) {
-            let a_val = if i < n { self.a[i] } else { Modint::new(0) };
-            let b_val = if i < m { other.a[i] } else { Modint::new(0) };
-            c.push(a_val - b_val);
-        }
-        Fps::from_mint_vec(c)
-    }
-}
-
-impl std::ops::Sub<Fps> for Fps {
-    type Output = Fps;
-    fn sub(self, other: Fps) -> Fps {
-        &self - &other
-    }
-}
-
-impl std::ops::Mul<&Fps> for &Fps {
-    type Output = Fps;
-
-    fn mul(self, other: &Fps) -> Fps {
-        let n = self.a.len();
-        let m = other.a.len();
-        let res = convolution(self.a.clone(), other.a.clone());
-        Fps::from_mint_vec(res)
-    }
-}
-
-impl std::ops::Mul<Fps> for Fps {
-    type Output = Fps;
-
-    fn mul(self, other: Fps) -> Fps {
-        &self * &other
-    }
-}
-
-impl std::ops::Div<&Fps> for &Fps {
-    type Output = Fps;
-
-    fn div(self, other: &Fps) -> Fps {
-        let n = self.n;
-        let m = other.n;
-        let inv = other.inv(n.max(m) + 10);
-        self * &inv
-    }
-}
-
-impl std::ops::Div<Fps> for Fps {
-    type Output = Fps;
-
-    fn div(self, other: Fps) -> Fps {
-        &self / &other
     }
 }
 
