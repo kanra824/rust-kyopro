@@ -7,8 +7,7 @@ use super::fps::*;
 /// 
 /// P(x), Q(x) の最大次数を k として、 O(k logk logn )で動作する
 /// 
-/// TODO: 線形漸化式を P(x) / Q(x) に変換するパートを実装したい。
-pub fn bostan_mori(n: usize, mut p: Fps, mut q: Fps) -> Modint {
+pub fn bostan_mori(n: i64, mut p: Fps, mut q: Fps) -> Modint {
     let mut k = n;
     while k > 0 {
         // 分子分母に Q(-x) をかける
@@ -87,7 +86,7 @@ fn convert_linear_recurrence_relation(mut c: Vec<i64>, a: Vec<i64>) -> (Fps, Fps
 /// a_n = c_(k-1) * a_(n-1) + c_(k-2) * a_(n-2) + ... + c_0 * a_(n-k) とする。
 /// 
 /// n 項目を O(k logk logn) で求める。
-pub fn bostan_mori_from_linear_recurrence_relation(n: usize, c: Vec<i64>, a: Vec<i64>) -> Modint {
+pub fn bostan_mori_from_linear_recurrence_relation(n: i64, c: Vec<i64>, a: Vec<i64>) -> Modint {
     let (p, q) = convert_linear_recurrence_relation(c, a);
     bostan_mori(n, p, q)
 }

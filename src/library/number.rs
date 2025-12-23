@@ -2,6 +2,7 @@ pub mod combination;
 pub mod ext_gcd;
 pub mod factorization;
 pub mod fft;
+pub mod garner;
 pub mod gcd;
 pub mod min_of_mod_of_linear;
 pub mod mint;

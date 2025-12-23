@@ -6,7 +6,13 @@ fn main() {
     // let mut source = LineSource::new(BufReader::new(stdin.lock()));
     input! {
         // from &mut source,
+        n: i64,
+        b: usize,
+        k: usize,
+        c: [usize; k],
     }
+
+
 }
 
 mod library;

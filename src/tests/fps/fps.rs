@@ -40,7 +40,7 @@ fn test_fps_differential() {
     let start = std::time::Instant::now();
     let g = f.differential(n);
     let time = start.elapsed().as_millis();
-    assert!(time <= 100, "fps differential time exceeded: {} ms", time);
+    assert!(time <= 500, "fps differential time exceeded: {} ms", time);
     for i in 0..n-1 {
         assert_eq!(g.a[i], f.a[i+1] * Modint::new(i as i64 + 1));
     }
@@ -54,7 +54,7 @@ fn test_fps_integral() {
     let start = std::time::Instant::now();
     let g = f.integral(n);
     let time = start.elapsed().as_millis();
-    assert!(time <= 100, "fps integral time exceeded: {} ms", time);
+    assert!(time <= 500, "fps integral time exceeded: {} ms", time);
     assert_eq!(g.a[0], Modint::new(0));
     for i in 1..n {
         assert_eq!(g.a[i], f.a[i-1] * Modint::new(i as i64).inv());

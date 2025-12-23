@@ -1,6 +1,7 @@
-pub const MOD998244353: i64 = 998244353;
+use once_cell::sync::Lazy;
+use std::sync::RwLock;
 
-static mut MINT_MOD: i64 = 998244353;
+static MINT_MOD: Lazy<RwLock<i64>> = Lazy::new(|| RwLock::new(998244353));
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Modint {
@@ -15,18 +16,29 @@ impl std::fmt::Display for Modint {
 }
 
 impl Modint {
-    fn get_p() -> i64 {
-        unsafe { MINT_MOD }
+    pub fn get_p() -> i64 {
+        *MINT_MOD.read().unwrap()
     }
 
+    /// ライブラリの実装時は new_p を使うこと。
+    /// 
+    /// あくまで main の実装時に任意 mod を楽に扱うためのメソッド
     pub fn set_p(p: i64) {
-        unsafe {
-            MINT_MOD = p;
-        }
+        *MINT_MOD.write().unwrap() = p;
     }
 
     pub fn new(x: i64) -> Self {
         let p = Modint::get_p();
+        if x >= 0 {
+            Modint { x: x % p, p }
+        } else {
+            let tmp = x.abs() % p;
+            let val = x + tmp * p;
+            Modint { x: (val + p) % p, p }
+        }
+    }
+
+    pub fn new_p(x: i64, p: i64) -> Self {
         if x >= 0 {
             Modint { x: x % p, p }
         } else {

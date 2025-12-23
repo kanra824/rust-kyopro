@@ -1,5 +1,5 @@
 use crate::library::number::combination::*;
-use crate::library::number::{mint::Modint, ntt::convolution};
+use crate::library::number::{mint::Modint, ntt::{convolution, convolution_with_arbitrary_mod}};
 
 #[derive(Clone, Debug)]
 pub struct Fps {
@@ -230,7 +230,16 @@ impl std::ops::Mul<&Fps> for &Fps {
     fn mul(self, other: &Fps) -> Fps {
         let n = self.a.len();
         let m = other.a.len();
-        let res = convolution(self.a.clone(), other.a.clone());
+        let res = if self.a[0].p == 998244353 {
+            // O((n + m) log(n+m))
+            convolution(self.a.clone(), other.a.clone())
+        } else {
+            let a_i64 = self.a.clone().into_iter().map(|val| val.x).collect();
+            let b_i64 = self.a.clone().into_iter().map(|val| val.x).collect();
+            let v = convolution_with_arbitrary_mod(self.a[0].p, a_i64, b_i64);
+            v.iter().map(|&val| Modint::new(val)).collect()
+        };
+
         Fps::from_mint_vec(res)
     }
 }
