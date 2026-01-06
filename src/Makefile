@@ -18,3 +18,7 @@ interactive:
 	cp ../template/interactive.rs ./main.rs
 	cat ../template/template.rs >> ./main.rs
 
+.PHONY: yosupo
+yosupo:
+	cp ../template/yosupo.rs ./main.rs
+	cat ../template/template.rs >> ./main.rs

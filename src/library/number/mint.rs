@@ -1,7 +1,4 @@
-use once_cell::sync::Lazy;
-use std::sync::RwLock;
-
-static MINT_MOD: Lazy<RwLock<i64>> = Lazy::new(|| RwLock::new(998244353));
+static mut MINT_MOD: i64 = 998244353;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Modint {
@@ -17,14 +14,18 @@ impl std::fmt::Display for Modint {
 
 impl Modint {
     pub fn get_p() -> i64 {
-        *MINT_MOD.read().unwrap()
+        unsafe {
+            MINT_MOD
+        }
     }
 
     /// ライブラリの実装時は new_p を使うこと。
     /// 
     /// あくまで main の実装時に任意 mod を楽に扱うためのメソッド
     pub fn set_p(p: i64) {
-        *MINT_MOD.write().unwrap() = p;
+        unsafe {
+            MINT_MOD = p
+        }
     }
 
     pub fn new(x: i64) -> Self {
@@ -46,6 +47,10 @@ impl Modint {
             let val = x + tmp * p;
             Modint { x: (val + p) % p, p }
         }
+    }
+
+    pub fn from_vec(v: Vec<i64>) -> Vec<Self> {
+        v.iter().map(|&x| Self::new(x)).collect()
     }
 
     pub fn pow(&self, mut k: i64) -> Self {

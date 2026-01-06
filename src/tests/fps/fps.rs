@@ -33,6 +33,20 @@ fn test_fps_inv() {
 }
 
 #[test]
+fn test_fps_exp() {
+    // yosupo judge: https://judge.yosupo.jp/problem/inv_of_formal_power_series
+
+    let n = 500000;
+    let m = 1000000000;
+    let mut f = create_random_fps(n, m);
+    f.a[0] = Modint::new(0);
+    let start = std::time::Instant::now();
+    let g = f.exp(n);
+    let time = start.elapsed().as_millis();
+    assert!(time <= 5000, "fps inv time exceeded: {} ms", time);
+}
+
+#[test]
 fn test_fps_differential() {
     let n = 500000;
     let m = 1000000000;

@@ -37,6 +37,25 @@ impl Fps {
         }
     }
 
+    pub fn debug_print(&self) {
+        for i in 0..self.n {
+            print!("{}", self.a[i]);
+            if self.n == 1 {
+                println!();
+                return;
+            }
+            if i != 0 {
+                print!("x^{}", i);
+            }
+            
+            if i == self.n-1 {
+                println!();
+            } else {
+                print!(" + ");
+            }
+        }
+    }
+
     /// x^n までとる
     pub fn get_n(&self, n: usize) -> Self {
         let mut a = vec![Modint::new(0); n + 1];
@@ -71,7 +90,7 @@ impl Fps {
         assert!(self.a[0] != Modint::new(0));
         let mut g = Fps::from_mint_vec(vec![self.a[0].inv()]);
         let mut sz = 1;
-        while sz < n {
+        while sz <= n {
             sz *= 2;
             let mut ng = &g * &self.get_n(sz);
             ng = Fps::from_const(2) - ng;
@@ -83,7 +102,7 @@ impl Fps {
             }
         }
 
-        g
+        g.get_n(n)
     }
 
     /// 微分
@@ -97,6 +116,9 @@ impl Fps {
             } else {
                 a.push(Modint::new(0));
             }
+        }
+        if a.len() == 0 {
+            a.push(Modint::new(0));
         }
         Fps::from_mint_vec(a)
     }
@@ -125,8 +147,8 @@ impl Fps {
     /// f_0 == 1 でないといけない
     pub fn log(&self, n: usize) -> Self {
         assert_eq!(self.a[0].x, 1);
-        let df = self.differential(n);
-        (&df / self).integral(n).get_n(n)
+        let df = self.differential(n+1);
+        (&df / self).integral(n+1).get_n(n)
     }
 
     /// exp f
@@ -138,7 +160,7 @@ impl Fps {
         assert_eq!(self.a[0].x, 0);
         let mut g = Fps::from_const(1);
         let mut sz = 1;
-        while sz < n {
+        while sz <= n {
             sz *= 2;
             let mut ng = &g * &(self.get_n(sz) + Fps::from_const(1) - g.log(sz));
             if sz >= n {
@@ -148,7 +170,7 @@ impl Fps {
             }
         }
 
-        g
+        g.get_n(n)
     }
 
     pub fn inv_one_minus_xk(k: usize, n: usize, comb: &mut Combination) -> Modint {

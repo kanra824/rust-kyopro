@@ -11,7 +11,6 @@ use std::io::stdin;
 use std::io::stdout;
 use std::ops;
 use std::str::FromStr;
-use std::sync::OnceLock;
 
 fn main() {
     let mut s = String::new();
@@ -19,15 +18,16 @@ fn main() {
     let mut re = Reader::new(&mut s, stdin);
 
     let n: usize = re.r();
-    let m: usize = re.r();
     let a: Vec<i64> = re.rv();
-    let b: Vec<i64> = re.rv();
+    let fps = Fps::from_i64_vec(a);
 
-    let res = convolution_with_arbitrary_mod(MOD107, a, b);
+    let res = fps.log(n-1);
 
-    pr_vec(&res);
+    pr_vec(&res.a);
 }
 
+
+// use library::number::mint::*;
 static mut MINT_MOD: i64 = 998244353;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -44,12 +44,17 @@ impl std::fmt::Display for Modint {
 
 impl Modint {
     pub fn get_p() -> i64 {
-        unsafe { MINT_MOD }
+        unsafe {
+            MINT_MOD
+        }
     }
 
+    /// ライブラリの実装時は new_p を使うこと。
+    /// 
+    /// あくまで main の実装時に任意 mod を楽に扱うためのメソッド
     pub fn set_p(p: i64) {
         unsafe {
-            MINT_MOD = p;
+            MINT_MOD = p
         }
     }
 
@@ -62,6 +67,20 @@ impl Modint {
             let val = x + tmp * p;
             Modint { x: (val + p) % p, p }
         }
+    }
+
+    pub fn new_p(x: i64, p: i64) -> Self {
+        if x >= 0 {
+            Modint { x: x % p, p }
+        } else {
+            let tmp = x.abs() % p;
+            let val = x + tmp * p;
+            Modint { x: (val + p) % p, p }
+        }
+    }
+
+    pub fn from_vec(v: Vec<i64>) -> Vec<Self> {
+        v.iter().map(|&x| Self::new(x)).collect()
     }
 
     pub fn pow(&self, mut k: i64) -> Self {
@@ -222,6 +241,77 @@ impl std::ops::DivAssign<i64> for Modint {
 }
 
 
+pub struct Combination {
+    n: usize,
+    fact: Vec<Modint>,
+    rfact: Vec<Modint>,
+}
+
+impl Combination {
+    pub fn new() -> Self {
+        Combination {
+            n: 1,
+            fact: vec![Modint::new(1)],
+            rfact: vec![Modint::new(1)],
+        }
+    }
+
+    pub fn extend(&mut self, n: usize) {
+        if self.n >= n {
+            return
+        }
+        for i in self.n..n {
+            self.fact.push(self.fact[i - 1] * Modint::new(i as i64));
+        }
+        for i in self.n..n {
+            self.rfact.push(self.fact[i].inv());
+        }
+        self.n = n;
+    }
+
+    pub fn fact(&mut self, k: usize) -> Modint {
+        self.extend(k + 1);
+        self.fact[k]
+    }
+
+    pub fn rfact(&mut self, k: usize) -> Modint {
+        self.extend(k + 1);
+        self.rfact[k]
+    }
+
+    #[allow(non_snake_case)]
+    pub fn P(&mut self, n: usize, k: usize) -> Modint {
+        if n < k {
+            Modint::new(0)
+        } else {
+            self.fact(n) * self.rfact(n - k)
+        }
+    }
+
+    #[allow(non_snake_case)]
+    pub fn C(&mut self, n: usize, k: usize) -> Modint {
+        if n < k {
+            Modint::new(0)
+        } else {
+            self.fact(n) * self.rfact(k) * self.rfact(n - k)
+        }
+    }
+
+    #[allow(non_snake_case)]
+    pub fn H(&mut self, n: usize, k: usize) -> Modint {
+        if n == 0 && k == 0 {
+            Modint::new(1)
+        } else {
+            self.C(n + k - 1, k)
+        }
+    }
+}
+
+
+
+/// p に対応する val の列から、これに対応する x を p で割ったあまりを求める。
+/// 
+/// O(n^2 + n log(max{pv}))
 pub fn garner(mut pv: Vec<i64>, mut valv: Vec<i64>, p: i64) -> i64 {
     pv.push(p);
     valv.push(0);
@@ -230,10 +320,7 @@ pub fn garner(mut pv: Vec<i64>, mut valv: Vec<i64>, p: i64) -> i64 {
     let mut coffs = vec![1; n];
     let mut consts = vec![0; n];
     for i in 0..n-1 {
-        let prev_p = Modint::get_p();
-        Modint::set_p(pv[i]);
-        let mut val = (valv[i] - consts[i]) * Modint::new(coffs[i]).inv().x % pv[i];
-        Modint::set_p(prev_p);
+        let mut val = (valv[i] - consts[i]) * Modint::new_p(coffs[i], pv[i]).inv().x % pv[i];
 
         if val < 0 {
             val += pv[i];
@@ -373,6 +460,8 @@ fn butterfly_ntt(a: &mut Vec<Modint>, root: &Vec<Modint>) {
     }
 }
 
+/// 任意 mod FFT
+/// sza + szb < 2^23 を前提とする。 (8 * 10^6 くらい)
 pub fn convolution_with_arbitrary_mod(p: i64, mut a: Vec<i64>, mut b: Vec<i64>) -> Vec<i64> {
     let sza = a.len();
     let szb = b.len();
@@ -384,12 +473,11 @@ pub fn convolution_with_arbitrary_mod(p: i64, mut a: Vec<i64>, mut b: Vec<i64>) 
     let pv = vec![167772161, 469762049, 1224736769];
     let mut v = vec![];
     for i in 0..3 {
-        Modint::set_p(pv[i]);
-        let mut a_mint = a.iter().map(|&x| Modint::new(x)).collect::<Vec<_>>();
-        let mut b_mint = b.iter().map(|&x| Modint::new(x)).collect::<Vec<_>>();
+        let mut a_mint = a.iter().map(|&x| Modint::new_p(x, pv[i])).collect::<Vec<_>>();
+        let mut b_mint = b.iter().map(|&x| Modint::new_p(x, pv[i])).collect::<Vec<_>>();
 
-        a_mint.resize(n, Modint::new(0));
-        b_mint.resize(n, Modint::new(0));
+        a_mint.resize(n, Modint::new_p(0, pv[i]));
+        b_mint.resize(n, Modint::new_p(0, pv[i]));
 
         let powv = calc_powv(pv[i]);
         let invpowv = calc_invpowv(pv[i]);
@@ -411,7 +499,6 @@ pub fn convolution_with_arbitrary_mod(p: i64, mut a: Vec<i64>, mut b: Vec<i64>) 
         }
         v.push(a_mint);
     }
-    Modint::set_p(998244353);
 
     let mut res = vec![];
     for i in 0..v[0].len() {
@@ -458,6 +545,299 @@ pub fn convolution(mut a: Vec<Modint>, mut b: Vec<Modint>) -> Vec<Modint> {
     a
 }
 
+
+
+#[derive(Clone, Debug)]
+pub struct Fps {
+    pub n: usize,
+    pub a: Vec<Modint>,
+}
+
+// \Sum[i=0 to inf] (x^k)^i = 1 / (1 - x^k)
+// [x^n] 1 / (1 - x^k) = (n + r - 1) C (r - 1)
+
+impl Fps {
+    pub fn new() -> Self {
+        Fps {
+            n: 1,
+            a: vec![Modint::new(0)],
+        }
+    }
+
+    pub fn from_mint_vec(a: Vec<Modint>) -> Self {
+        Fps { n: a.len(), a }
+    }
+
+    pub fn from_i64_vec(a_in: Vec<i64>) -> Self {
+        let mut a = vec![];
+        for i in 0..a_in.len() {
+            a.push(Modint::new(a_in[i]));
+        }
+        Fps { n: a.len(), a }
+    }
+
+    pub fn from_const(val: i64) -> Self {
+        Fps {
+            n: 1,
+            a: vec![Modint::new(val)],
+        }
+    }
+
+    pub fn debug_print(&self) {
+        for i in 0..self.n {
+            print!("{}", self.a[i]);
+            if self.n == 1 {
+                println!();
+                return;
+            }
+            if i != 0 {
+                print!("x^{}", i);
+            }
+
+            if i == self.n-1 {
+                println!();
+            } else {
+                print!(" + ");
+            }
+        }
+    }
+
+    /// x^n までとる
+    pub fn get_n(&self, n: usize) -> Self {
+        let mut a = vec![Modint::new(0); n + 1];
+        for i in 0..self.n {
+            if i > n {
+                break;
+            }
+            a[i] = self.a[i];
+        }
+        Fps {
+            n: a.len(),
+            a: a.to_vec(),
+        }
+    }
+
+    pub fn substitute(&self, x: Modint) -> Modint {
+        let mut mul = x;
+        let mut res = self.a[0];
+        for i in 1..self.n {
+            res += self.a[i] * mul;
+            mul *= x;
+        }
+        res
+    }
+
+    /// 1 / (1 - x) を x^nまで計算する。
+    /// 
+    /// O(N logN)
+    /// 
+    /// f_0 = 0 のときは存在しない
+    pub fn inv(&self, n: usize) -> Self {
+        assert!(self.a[0] != Modint::new(0));
+        let mut g = Fps::from_mint_vec(vec![self.a[0].inv()]);
+        let mut sz = 1;
+        while sz <= n {
+            sz *= 2;
+            let mut ng = &g * &self.get_n(sz);
+            ng = Fps::from_const(2) - ng;
+            ng = &g * &ng;
+            g = ng.get_n(sz);
+        }
+
+        g.get_n(n)
+    }
+
+    /// 微分
+    /// 
+    /// O(N)
+    pub fn differential(&self, n: usize) -> Self {
+        let mut a = vec![];
+        for i in 1..n {
+            if i < self.n {
+                a.push(self.a[i] * Modint::new(i as i64));
+            } else {
+                a.push(Modint::new(0));
+            }
+        }
+        if a.len() == 0 {
+            a.push(Modint::new(0));
+        }
+        Fps::from_mint_vec(a)
+    }
+
+    /// 積分
+    /// 
+    /// O(N)
+    pub fn integral(&self, n: usize) -> Self {
+        let mut a = vec![Modint::new(0)];
+        for i in 0..n - 1 {
+            if i < self.n {
+                a.push(self.a[i] / Modint::new((i as i64) + 1));
+            } else {
+                a.push(Modint::new(0));
+            }
+        }
+        Fps::from_mint_vec(a)
+    }
+
+    /// log f
+    /// 
+    /// O(N logN)
+    /// 
+    /// log f = integral ((differential f) / f)
+    /// 
+    /// f_0 == 1 でないといけない
+    pub fn log(&self, n: usize) -> Self {
+        assert_eq!(self.a[0].x, 1);
+        let df = self.differential(n+1);
+        (&df / self).integral(n+1).get_n(n)
+    }
+
+    /// exp f
+    /// 
+    /// O(N logN)
+    /// 
+    /// f_0 == 0 でないといけない
+    pub fn exp(&self, n: usize) -> Self {
+        assert_eq!(self.a[0].x, 0);
+        let mut g = Fps::from_const(1);
+        let mut sz = 1;
+        while sz <= n {
+            sz *= 2;
+            let mut ng = &g * &(self.get_n(sz) + Fps::from_const(1) - g.log(sz));
+            g = ng.get_n(sz);
+        }
+
+        g.get_n(n)
+    }
+
+    pub fn inv_one_minus_xk(k: usize, n: usize, comb: &mut Combination) -> Modint {
+        /*
+        (1 + x^k + x^{2k} + x^{3k} + ... ) = 1 / (1 - x^k)
+
+        [x^n] 1 / (1 - x^k) = (n + r - 1) C (r - 1)
+        */
+        comb.C(n + k - 1, k - 1)
+    }
+}
+
+impl std::ops::Neg for &Fps {
+    type Output = Fps;
+
+    fn neg(self) -> Fps {
+        let zero = Fps::from_const(0);
+        &zero - self
+    }
+}
+
+impl std::ops::Neg for Fps {
+    type Output = Fps;
+
+    fn neg(self) -> Fps {
+        -(&self)
+    }
+}
+
+impl std::ops::Add<&Fps> for &Fps {
+    type Output = Fps;
+
+    fn add(self, other: &Fps) -> Fps {
+        let mut c = vec![];
+        let n = self.a.len();
+        let m = other.a.len();
+        for i in 0..n.min(m) {
+            c.push(self.a[i] + other.a[i]);
+        }
+
+        if n > m {
+            for i in m..n {
+                c.push(self.a[i]);
+            }
+        } else {
+            for i in n..m {
+                c.push(other.a[i]);
+            }
+        }
+        Fps::from_mint_vec(c)
+    }
+}
+
+impl std::ops::Add<Fps> for Fps {
+    type Output = Fps;
+    fn add(self, other: Fps) -> Fps {
+        &self + &other
+    }
+}
+
+impl std::ops::Sub<&Fps> for &Fps {
+    type Output = Fps;
+
+    fn sub(self, other: &Fps) -> Fps {
+        let mut c = vec![];
+        let n = self.a.len();
+        let m = other.a.len();
+        for i in 0..n.max(m) {
+            let a_val = if i < n { self.a[i] } else { Modint::new(0) };
+            let b_val = if i < m { other.a[i] } else { Modint::new(0) };
+            c.push(a_val - b_val);
+        }
+        Fps::from_mint_vec(c)
+    }
+}
+
+impl std::ops::Sub<Fps> for Fps {
+    type Output = Fps;
+    fn sub(self, other: Fps) -> Fps {
+        &self - &other
+    }
+}
+
+impl std::ops::Mul<&Fps> for &Fps {
+    type Output = Fps;
+
+    fn mul(self, other: &Fps) -> Fps {
+        let n = self.a.len();
+        let m = other.a.len();
+        let res = if self.a[0].p == 998244353 {
+            // O((n + m) log(n+m))
+            convolution(self.a.clone(), other.a.clone())
+        } else {
+            let a_i64 = self.a.clone().into_iter().map(|val| val.x).collect();
+            let b_i64 = self.a.clone().into_iter().map(|val| val.x).collect();
+            let v = convolution_with_arbitrary_mod(self.a[0].p, a_i64, b_i64);
+            v.iter().map(|&val| Modint::new(val)).collect()
+        };
+
+        Fps::from_mint_vec(res)
+    }
+}
+
+impl std::ops::Mul<Fps> for Fps {
+    type Output = Fps;
+
+    fn mul(self, other: Fps) -> Fps {
+        &self * &other
+    }
+}
+
+impl std::ops::Div<&Fps> for &Fps {
+    type Output = Fps;
+
+    fn div(self, other: &Fps) -> Fps {
+        let n = self.n;
+        let m = other.n;
+        let inv = other.inv(n.max(m) + 10);
+        self * &inv
+    }
+}
+
+impl std::ops::Div<Fps> for Fps {
+    type Output = Fps;
+
+    fn div(self, other: Fps) -> Fps {
+        &self / &other
+    }
+}
 
 
 

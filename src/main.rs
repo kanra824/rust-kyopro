@@ -1,31 +1,41 @@
 #![allow(unused)]
 
-fn main() {
-    // // interactive
-    // let stdin = stdin();
-    // let mut source = LineSource::new(BufReader::new(stdin.lock()));
-    input! {
-        // from &mut source,
-        n: i64,
-        b: usize,
-        k: usize,
-        c: [usize; k],
+use rand::{rng, Rng};
+
+fn create_random_fps(n: usize, m: i64) -> Fps {
+    let mut rng = rng();
+    let mut a = vec![];
+    for _ in 0..n {
+        a.push(rng.random_range(0..=m));
     }
-
-
+    Fps::from_i64_vec(a)
 }
 
-mod library;
-mod tests;
+fn main() {
+    let n = 500000;
+    let m = 10000000000i64;
+    let mut a = create_random_fps(n, m);
+    a.a[0] = Modint::new(0);
 
-use proconio::marker::{Chars, Isize1, Usize1};
-use proconio::{input, source::line::LineSource};
+    let res = a.exp(n-1);
+
+    // pr_vec(&res.a);
+}
+
+
+mod library;
+// use library::number::mint::*;
+use library::fps::fps::*;
+
+mod tests;
 
 use std::cmp::{max, min};
 use std::collections::*;
 use std::io::{stdin, stdout, BufReader, Read, Stdin, Write};
 use std::str::FromStr;
 use std::{fmt, ops};
+
+use crate::library::number::mint::Modint;
 
 /// 有名MODその1
 const MOD998: i64 = 998244353;

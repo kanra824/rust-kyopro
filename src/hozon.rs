@@ -1,25 +1,25 @@
 #![allow(unused)]
 
-
 fn main() {
     let mut s = String::new();
     let stdin = stdin();
     let mut re = Reader::new(&mut s, stdin);
-    
-    let n: usize = re.r();
-    let a: Vec<i64> = re.rv();
 
-    let a = Fps::from_i64_vec(a);
-    let b = a.log(n);
-    for i in 0..n {
-        print!(" {}", b.a[i])
-    }
-    println!();
+    let n: usize = re.r();
+    let m: usize = re.r();
+    let a: Vec<i64> = re.rv();
+    let b: Vec<i64> = re.rv();
+
+    let res = convolution(Modint::from_vec(a), Modint::from_vec(b));
+    pr_vec(&res);
 }
 
-mod library;
-use library::fps::fps::Fps;
 
+mod library;
+use library::number::mint::*;
+use library::number::ntt::convolution;
+
+mod tests;
 
 use std::cmp::{max, min};
 use std::collections::*;

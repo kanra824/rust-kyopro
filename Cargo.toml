@@ -3,6 +3,9 @@ name = "atcoder"
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+debug = true
+
 [dependencies]
 # # 202411から:
 # rpds = "=1.1.1"

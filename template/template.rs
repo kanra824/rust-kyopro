@@ -1,4 +1,9 @@
 
+mod library;
+use library::number::mint::*;
+
+mod tests;
+
 use std::cmp::{max, min};
 use std::collections::*;
 use std::io::{stdin, stdout, BufReader, Read, Stdin, Write};

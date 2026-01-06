@@ -1,6 +1,5 @@
 use crate::library::number::mint::{Modint};
 use crate::library::number::garner::*;
-use std::sync::OnceLock;
 
 fn check_prime(p: i64) -> (i64, i64, i64) {
     // https://www.mathenachia.blog/ntt-mod-list-01/
