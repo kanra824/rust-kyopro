@@ -81,7 +81,10 @@ impl std::ops::Add<i64> for Modint {
     type Output = Modint;
 
     fn add(mut self, rhs: i64) -> Modint {
-        self.x = (self.x + rhs % self.p) % self.p;
+        self.x += rhs;
+        if self.x >= self.p {
+            self.x -= self.p
+        }
         self
     }
 }
@@ -98,7 +101,10 @@ impl std::ops::Sub<i64> for Modint {
     type Output = Modint;
 
     fn sub(mut self, rhs: i64) -> Modint {
-        self.x = (self.x + self.p - rhs % self.p) % self.p;
+        if self.x < rhs {
+            self.x += self.p;
+        }
+        self.x -= rhs;
         self
     }
 }
