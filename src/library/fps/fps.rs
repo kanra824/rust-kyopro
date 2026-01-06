@@ -48,7 +48,7 @@ impl Fps {
         }
         Fps {
             n: a.len(),
-            a: a.to_vec(),
+            a,
         }
     }
 
@@ -76,7 +76,11 @@ impl Fps {
             let mut ng = &g * &self.get_n(sz);
             ng = Fps::from_const(2) - ng;
             ng = &g * &ng;
-            g = ng.get_n(sz);
+            if sz >= n {
+                g = ng.get_n(n);
+            } else {
+                g = ng.get_n(sz);
+            }
         }
 
         g
@@ -137,7 +141,11 @@ impl Fps {
         while sz < n {
             sz *= 2;
             let mut ng = &g * &(self.get_n(sz) + Fps::from_const(1) - g.log(sz));
-            g = ng.get_n(sz);
+            if sz >= n {
+                g = ng.get_n(n);
+            } else {
+                g = ng.get_n(sz);
+            }
         }
 
         g

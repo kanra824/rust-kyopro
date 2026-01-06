@@ -14,7 +14,8 @@ pub struct HeavyLightDecomposition {
 }
 
 impl HeavyLightDecomposition {
-    pub fn new(n: usize, g: Vec<Vec<usize>>) -> Self {
+    pub fn new(root: usize, g: Vec<Vec<usize>>) -> Self {
+        let n = g.len();
         let mut res = HeavyLightDecomposition {
             n,
             g,
@@ -26,13 +27,13 @@ impl HeavyLightDecomposition {
             shallow: vec![usize::MAX; n],
         };
 
-        res.dfs(0, usize::MAX, 0);
-        res.hld_rec(0, 0);
+        res.dfs(root, usize::MAX, 0);
+        res.hld_rec(root, 0);
 
         res
     }
 
-    pub fn hld(&mut self, root: usize) -> Vec<usize> {
+    pub fn hld(&mut self) -> Vec<usize> {
         self.node_to_hld.clone()
     }
 
