@@ -1,31 +1,22 @@
 #![allow(unused)]
 
-use rand::{rng, Rng};
+fn solve(re: &mut Reader) {
 
-fn create_random_fps(n: usize, m: i64) -> Fps {
-    let mut rng = rng();
-    let mut a = vec![];
-    for _ in 0..n {
-        a.push(rng.random_range(0..=m));
-    }
-    Fps::from_i64_vec(a)
 }
 
 fn main() {
-    let n = 500000;
-    let m = 10000000000i64;
-    let mut a = create_random_fps(n, m);
-    a.a[0] = Modint::new(0);
-
-    let res = a.exp(n-1);
-
-    // pr_vec(&res.a);
+    let stdin = stdin();
+    let mut re = Reader::new(stdin);
+    
+    let t: usize = re.r();
+    for _ in 0..t {
+        solve(&mut re);
+    }
 }
 
 
 mod library;
-// use library::number::mint::*;
-use library::fps::fps::*;
+use library::number::mint::*;
 
 mod tests;
 
@@ -34,8 +25,6 @@ use std::collections::*;
 use std::io::{stdin, stdout, BufReader, Read, Stdin, Write};
 use std::str::FromStr;
 use std::{fmt, ops};
-
-use crate::library::number::mint::Modint;
 
 /// 有名MODその1
 const MOD998: i64 = 998244353;
@@ -82,26 +71,36 @@ where
 
 struct Reader<'a> {
     stdin: Stdin,
+    buf: String,
     tokens: Vec<VecDeque<&'a str>>,
     idx: usize,
 }
 
 impl<'a> Reader<'a> {
-    fn new(str: &'a mut String, mut stdin: Stdin) -> Self {
-        stdin.read_to_string(str).unwrap();
-        let tokens: Vec<VecDeque<&str>> = str
-            .trim()
-            .split('\n')
-            .map(|v| v.split_whitespace().collect())
-            .collect();
+    fn new(mut stdin: Stdin) -> Self {
+        let mut buf = String::new();
+        stdin.read_to_string(&mut buf).unwrap();
+        
+        // bufはReaderの一部として保持されるため、
+        // tokensのライフタイムはReaderと同じになる
+        let tokens: Vec<VecDeque<&'a str>> = unsafe {
+            let buf_ptr = buf.as_str() as *const str;
+            (*buf_ptr)
+                .trim()
+                .split('\n')
+                .map(|v| v.split_whitespace().collect())
+                .collect()
+        };
+        
         Reader {
             stdin,
+            buf,
             tokens,
             idx: 0,
         }
     }
 
-    // read a token
+    /// read a token
     fn r<T: FromStr>(&mut self) -> T {
         let str = self.tokens[self.idx].pop_front().unwrap();
         let res = str.parse().ok().unwrap();
@@ -111,7 +110,7 @@ impl<'a> Reader<'a> {
         res
     }
 
-    // read vec
+    /// read vec
     fn rv<T: FromStr>(&mut self) -> Vec<T> {
         let deque = &mut self.tokens[self.idx];
         let mut res = vec![];
@@ -123,7 +122,7 @@ impl<'a> Reader<'a> {
         res
     }
 
-    // read n lines
+    /// read n lines
     fn rl<T: FromStr>(&mut self, n: usize) -> Vec<T> {
         let mut res = vec![];
         let len = self.tokens.len();
@@ -137,7 +136,7 @@ impl<'a> Reader<'a> {
         res
     }
 
-    // read string as chars
+    /// read string as chars
     fn as_chars(&mut self) -> Vec<char> {
         let str = self.tokens[self.idx].pop_front().unwrap();
         if self.tokens[self.idx].is_empty() {
